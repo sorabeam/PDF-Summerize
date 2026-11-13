@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 export function UploadBox() {
-  const [file, setFile] = useState<FileList | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -11,7 +11,13 @@ export function UploadBox() {
           id="InPutFile"
           type="file"
           accept="application/pdf"
-          onChange={(e) => setFile(e.target.files)}
+          onChange={(e) => {
+            if (e.target.files != null) {
+              setFile(e.target.files[0]);
+            } else {
+              setFile(null);
+            }
+          }}
         />
       </div>
 
@@ -20,8 +26,8 @@ export function UploadBox() {
           onClick={() => {
             if (file != null) {
               console.log(
-                file[0].name,
-                (file[0].size / 1024 ** 2).toFixed(2) + " MB",
+                file.name,
+                (file.size / 1024 ** 2).toFixed(2) + " MB",
               );
             } else {
               console.warn("not selected file (must be PDF)");
