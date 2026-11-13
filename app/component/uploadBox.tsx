@@ -12,7 +12,7 @@ export function UploadBox() {
           type="file"
           accept="application/pdf"
           onChange={(e) => {
-            if (e.target.files != null) {
+            if (e.target.files !== null) {
               setFile(e.target.files[0]);
             } else {
               setFile(null);
