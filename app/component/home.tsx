@@ -1,4 +1,4 @@
-export function ClientHome() {
+export function HomePage() {
   return (
     <div className=" h-screen flex flex-col gap-2 items-center justify-center">
       <h1 className=" text-3xl "> PDF - Summarizer </h1>
