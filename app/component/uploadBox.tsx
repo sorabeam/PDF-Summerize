@@ -1,7 +1,7 @@
 "use client";
 
 type FilePickerProps = {
-  onPick: (file: File) => void;
+  onPick: (file: File | null) => void;
 };
 
 export function UploadBox({ onPick }: FilePickerProps) {
@@ -14,6 +14,8 @@ export function UploadBox({ onPick }: FilePickerProps) {
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
               onPick(e.target.files[0]);
+            } else {
+              onPick(null);
             }
           }}
         />
