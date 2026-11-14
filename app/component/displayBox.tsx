@@ -9,17 +9,14 @@ export function DisplayBox({ file }: { file: File | null }) {
   return (
     <div className="flex flex-row gap-2 w-100 justify-center">
       <div className="bg-cyan-700 text-center w-full">
-        <button onClick={() => setIsDisplayAllowed(true)}>
-          {" "}
-          กดเพื่อแสดงผล{" "}
-        </button>
+        <button onClick={() => setIsDisplayAllowed(true)}>กดเพื่อแสดงผล</button>
       </div>
       <div
-        className={`${!display.ok ? "bg-red-900" : "bg-cyan-900"} text-center w-full`}
+        className={`${!display.ok && display.start ? "bg-red-900" : "bg-cyan-900"} text-center w-full`}
       >
         <p> {display.message} </p>
       </div>
-      {display.ok && isDisplayAllowed && (
+      {display.ok && (
         <button onClick={() => console.log(file)}>สรุปไฟล์</button>
       )}
     </div>
@@ -28,19 +25,24 @@ export function DisplayBox({ file }: { file: File | null }) {
 
 function checkValidation(file: File | null, isDisplayAllowed: boolean) {
   if (!isDisplayAllowed) {
-    return { ok: true, message: "กรุณาอัพโหลดไฟล์" };
+    return { ok: false, start: false, message: "กรุณาอัพโหลดไฟล์" };
   }
   if (file === null) {
-    return { ok: false, message: "ไม่พบไฟล์" };
+    return { ok: false, start: true, message: "ไม่พบไฟล์" };
   }
   if (file.type !== "application/pdf") {
-    return { ok: false, message: "ชนิดของไฟล์ไม่ถูกต้อง" };
+    return { ok: false, start: true, message: "ชนิดของไฟล์ไม่ถูกต้อง" };
   }
-  if (file.size == 0 || file.size / 1024 ** 2 > 10) {
-    return { ok: false, message: "ขนาดไฟล์ไม่ถูกต้อง (> 0 และ ≤ 10 MB)" };
+  if (file.size === 0 || file.size / 1024 ** 2 > 10) {
+    return {
+      ok: false,
+      start: true,
+      message: "ขนาดไฟล์ไม่ถูกต้อง (> 0 และ ≤ 10 MB)",
+    };
   }
   return {
     ok: true,
+    start: true,
     message:
       "File : " +
       file.name +
