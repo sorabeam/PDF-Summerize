@@ -1,3 +1,4 @@
+import { MAX_FILE_SIZE_MB } from "@/lib/constants";
 import type { Lecture } from "@/types/summary";
 
 const mock: Lecture = {
@@ -224,6 +225,33 @@ export async function GET() {
 export async function POST(request: Request) {
   const formData = await request.formData();
   const uploadedFile = formData.get("uploadedFile");
+
+  if (!(uploadedFile instanceof File)) {
+    return Response.json(
+      { error: "ต้องส่งเป็น File เท่านั้น" },
+      { status: 400 },
+    );
+  }
+
+  if (uploadedFile.size === 0) {
+    return Response.json(
+      { error: "ขนาดไฟล์ที่ส่งมาไม่ถูกต้อง (0MB)" },
+      { status: 400 },
+    );
+  }
+
+  if (uploadedFile.size / 1024 ** 2 > MAX_FILE_SIZE_MB) {
+    return Response.json({ error: "ขนาดไฟล์ใหญ่เกินไป" }, { status: 413 });
+  }
+
+  const head = await uploadedFile.slice(0, 4).text();
+  if (head !== "%PDF") {
+    return Response.json(
+      { error: "ประเภทไฟล์ไม่ถูกต้อง (ต้องเป็น PDF)" },
+      { status: 415 },
+    );
+  }
+
   console.log(uploadedFile);
 
   // แกล้งทำเป็นช้า 2 วิ จะได้เห็นสถานะ loading
