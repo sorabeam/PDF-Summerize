@@ -8,11 +8,10 @@ export function UploadBox() {
     <div className="flex flex-col gap-2">
       <div className="bg-cyan-900 items-center">
         <input
-          id="InPutFile"
           type="file"
           accept="application/pdf"
           onChange={(e) => {
-            if (e.target.files !== null) {
+            if (e.target.files !== null && e.target.files[0] !== null) {
               setFile(e.target.files[0]);
             } else {
               setFile(null);
@@ -34,7 +33,7 @@ export function UploadBox() {
             }
           }}
         >
-          <p>อ่านข้อมูลไฟล์</p>
+          อ่านข้อมูลไฟล์
         </button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { DisplayBox } from "./displayBox";
 import { UploadBox } from "./uploadBox";
 
 export function HomePage() {
@@ -7,6 +8,7 @@ export function HomePage() {
       <p className=" text-cyan-700 "> อัพโหลดไฟล์เพื่อสรุป </p>
 
       <UploadBox />
+      <DisplayBox />
     </div>
   );
 }
