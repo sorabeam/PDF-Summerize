@@ -220,3 +220,13 @@ const mock: Lecture = {
 export async function GET() {
   return Response.json(mock);
 }
+
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const uploadedFile = formData.get("uploadedFile");
+  console.log(uploadedFile);
+
+  // แกล้งทำเป็นช้า 2 วิ จะได้เห็นสถานะ loading
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  return Response.json(mock);
+}

@@ -1,25 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import SummarizeButton from "./summarizeButton";
 
 export function DisplayBox({ file }: { file: File | null }) {
   const [isDisplayAllowed, setIsDisplayAllowed] = useState<boolean>(false); //ทำตามโจทย์ที่ต้องกดปุ่มก่อน
   const display = checkValidation(file, isDisplayAllowed);
 
   return (
-    <div className="flex flex-row gap-2 w-100 justify-center">
-      <div className="bg-cyan-700 text-center w-full">
-        <button onClick={() => setIsDisplayAllowed(true)}>กดเพื่อแสดงผล</button>
+    <>
+      <div className="flex flex-row gap-2 w-100 justify-center">
+        <div className="bg-cyan-700 text-center w-full">
+          <button onClick={() => setIsDisplayAllowed(true)}>
+            กดเพื่อแสดงผล
+          </button>
+        </div>
+        <div
+          className={`${!display.ok && display.start ? "bg-red-900" : "bg-cyan-900"} text-center w-full`}
+        >
+          <p> {display.message} </p>
+        </div>
       </div>
-      <div
-        className={`${!display.ok && display.start ? "bg-red-900" : "bg-cyan-900"} text-center w-full`}
-      >
-        <p> {display.message} </p>
-      </div>
-      {display.ok && (
-        <button onClick={() => console.log(file)}>สรุปไฟล์</button>
-      )}
-    </div>
+      {display.ok && <SummarizeButton file={file} />}
+    </>
   );
 }
 

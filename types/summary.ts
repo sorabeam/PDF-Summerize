@@ -28,4 +28,6 @@ type Lecture = {
   slides: Slide[];
 };
 
-export type { TechnicalTerm, Bullet, Slide, Lecture };
+type Status = "idle" | "loading" | "error" | "done";
+
+export type { TechnicalTerm, Bullet, Slide, Lecture, Status };
