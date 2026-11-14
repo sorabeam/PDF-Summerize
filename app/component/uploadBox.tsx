@@ -12,7 +12,7 @@ export function UploadBox({ onPick }: FilePickerProps) {
           type="file"
           accept="application/pdf"
           onChange={(e) => {
-            if (e.target.files !== null && e.target.files[0] !== null) {
+            if (e.target.files && e.target.files.length > 0) {
               onPick(e.target.files[0]);
             }
           }}
