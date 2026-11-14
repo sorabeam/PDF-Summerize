@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { DisplayBox } from "./displayBox";
 import { UploadBox } from "./uploadBox";
-import SummarizeButton from "./summarizeButton";
 
 export function HomePage() {
   const [file, setFile] = useState<File | null>(null);

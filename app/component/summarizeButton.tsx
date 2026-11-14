@@ -4,7 +4,7 @@ import { Lecture, Status } from "@/types/summary";
 import { useState } from "react";
 
 export default function SummarizeButton({ file }: { file: File | null }) {
-  const [status, setStatus] = useState<Status | null>(null);
+  const [status, setStatus] = useState<Status | null>("idle");
   const [result, setResult] = useState<Lecture | null>(null);
 
   async function handleUpload() {
