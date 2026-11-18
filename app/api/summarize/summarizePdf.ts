@@ -2,7 +2,8 @@
 // ห้าม import ไฟล์นี้จาก component ฝั่ง client เด็ดขาด (API key จะรั่ว)
 
 import { CLAUDE_MODEL, MAX_OUTPUT_TOKENS } from "@/lib/constants";
-import type { Bullet, Lecture, Slide } from "@/types/summary";
+import type { Lecture } from "@/types/summary";
+import { parseBulletPart, parseSlidePart } from "./parseSummary";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -14,8 +15,11 @@ const COMMON_RULES = `คุณคือติวเตอร์ที่ช่�
 กติกา:
 - อธิบายเป็นภาษาไทย แต่ศัพท์เทคนิคให้คงภาษาเดิมของเอกสาร
 - เขียนกระชับ ประโยคสั้น ไม่เกริ่น ไม่ซ้ำ ตัดน้ำทิ้ง
-- field ที่มี ? ถ้าไม่มีเนื้อหาที่มีประโยชน์ให้ละทิ้งไปเลย
-- ตอบเป็น JSON อย่างเดียว ไม่มีข้อความอื่น ไม่มี markdown`;
+- ใช้เฉพาะข้อมูลที่มีในเอกสาร ห้ามแต่งเพิ่ม · ถ้าอธิบายเสริมให้เข้าใจง่ายขึ้นได้ แต่ต้องไม่ขัดกับเอกสาร
+- ถ้าเอกสารไม่ใช่บทเรียน (เช่น ใบเสนอราคา สัญญา รายงาน) ให้สรุปประเด็นสำคัญที่ผู้อ่านต้องรู้แทน ด้วยรูปแบบเดียวกัน
+- จำนวนหัวข้อให้พอดีกับความยาวเอกสาร เอกสารสั้นไม่ต้องยืด
+- field ที่มี ? ถ้าไม่มีเนื้อหาที่มีประโยชน์ให้ละทิ้งไปเลย · field ที่เป็น string[] ต้องเป็น array เสมอ แม้มีข้อเดียว
+- ตอบเป็น JSON ที่ถูกต้องอย่างเดียว (escape เครื่องหมาย " ในข้อความ) ไม่มีข้อความอื่น ไม่มี markdown`;
 
 // แบ่งงานเป็น 2 คำสั่ง ส่งพร้อมกัน → เร็วขึ้นเกือบเท่าตัว และแต่ละอันมีเพดาน token ของตัวเอง
 const BULLETS_PROMPT = `${COMMON_RULES}
@@ -50,8 +54,8 @@ export async function summarizePdf(file: File): Promise<Lecture> {
 
   // Promise.all = ยิง 2 คำขอพร้อมกัน แล้วรอจนเสร็จทั้งคู่ (ถ้าอันไหนพัง จะพังทั้งก้อน)
   const [bulletPart, slidePart] = await Promise.all([
-    askClaude<{ name: string; bullets: Bullet[] }>(apiKey, base64, BULLETS_PROMPT, "bullets"),
-    askClaude<{ slides: Slide[] }>(apiKey, base64, SLIDES_PROMPT, "slides"),
+    askClaude(apiKey, base64, BULLETS_PROMPT, "bullets", parseBulletPart),
+    askClaude(apiKey, base64, SLIDES_PROMPT, "slides", parseSlidePart),
   ]);
 
   return {
@@ -61,13 +65,14 @@ export async function summarizePdf(file: File): Promise<Lecture> {
   };
 }
 
-// ส่ง PDF + คำสั่ง 1 ชุด ไปให้ Claude แล้วแปลงคำตอบเป็น JSON
-// <T> = "generic" — ผู้เรียกบอกเองว่าคาดว่าจะได้ JSON หน้าตาแบบไหนกลับมา
+// ส่ง PDF + คำสั่ง 1 ชุด ไปให้ Claude → แปลงคำตอบเป็น JSON → ตรวจด้วย parse
+// <T> = "generic" — TypeScript เดา T เองจาก parse ที่ส่งเข้ามา (parseBulletPart → T = ส่วน bullets)
 async function askClaude<T>(
   apiKey: string,
   base64: string,
   prompt: string,
   label: string,
+  parse: (raw: unknown) => T | null,
 ): Promise<T> {
   const startedAt = Date.now();
 
@@ -135,11 +140,19 @@ async function askClaude<T>(
   // เผื่อ Claude ห่อ JSON มาด้วย ```json ... ``` → ตัดเอาแค่ตั้งแต่ { ตัวแรก ถึง } ตัวสุดท้าย
   const jsonText = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
 
+  let raw: unknown;
   try {
-    // TODO ก้อน 5: ตรวจว่า JSON หน้าตาตรงกับ type จริง ๆ
-    return JSON.parse(jsonText) as T;
+    raw = JSON.parse(jsonText);
   } catch {
-    console.error(`[${label}] JSON พัง:`, text);
+    console.error(`[${label}] JSON พัง (อ่านไม่ออก):`, text);
     throw new SummarizeError("สรุปออกมาผิดรูปแบบ ลองกดใหม่อีกครั้ง");
   }
+
+  // JSON อ่านออก แต่หน้าตาอาจไม่ตรง type → ตรวจ + ทำความสะอาด
+  const parsed = parse(raw);
+  if (parsed === null) {
+    console.error(`[${label}] JSON ผิดโครงสร้าง:`, text);
+    throw new SummarizeError("สรุปออกมาผิดรูปแบบ ลองกดใหม่อีกครั้ง");
+  }
+  return parsed;
 }
