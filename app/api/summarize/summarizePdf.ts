@@ -2,30 +2,41 @@
 // ห้าม import ไฟล์นี้จาก component ฝั่ง client เด็ดขาด (API key จะรั่ว)
 
 import { CLAUDE_MODEL, MAX_OUTPUT_TOKENS } from "@/lib/constants";
-import type { Lecture } from "@/types/summary";
+import type { Bullet, Lecture, Slide } from "@/types/summary";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
 // error ที่ "ตั้งใจโยน" พร้อมข้อความที่โชว์ผู้ใช้ได้
 export class SummarizeError extends Error {}
 
-const PROMPT = `คุณคือติวเตอร์ที่ช่วยนักเรียนอ่านหนังสือสอบ อ่านเอกสาร PDF ที่แนบมา แล้วสรุปออกมา 2 แบบ:
+const COMMON_RULES = `คุณคือติวเตอร์ที่ช่วยนักเรียนอ่านหนังสือสอบ อ่านเอกสาร PDF ที่แนบมา
 
-1. bullets = โน้ตทบทวนก่อนสอบ: จุดที่น่าจะออกสอบ คำศัพท์สำคัญ ประเด็นหลักของแต่ละหัวข้อ
-2. slides = อธิบายเนื้อหาทั้งหมดใหม่ทีละหัวข้อ ด้วยภาษาที่มือใหม่เข้าใจ ตัดส่วนที่ไม่สำคัญทิ้ง
+กติกา:
+- อธิบายเป็นภาษาไทย แต่ศัพท์เทคนิคให้คงภาษาเดิมของเอกสาร
+- เขียนกระชับ ประโยคสั้น ไม่เกริ่น ไม่ซ้ำ ตัดน้ำทิ้ง
+- field ที่มี ? ถ้าไม่มีเนื้อหาที่มีประโยชน์ให้ละทิ้งไปเลย
+- ตอบเป็น JSON อย่างเดียว ไม่มีข้อความอื่น ไม่มี markdown`;
 
-กติกาภาษา: อธิบายเป็นภาษาไทย แต่ศัพท์เทคนิคให้คงภาษาเดิมของเอกสาร
+// แบ่งงานเป็น 2 คำสั่ง ส่งพร้อมกัน → เร็วขึ้นเกือบเท่าตัว และแต่ละอันมีเพดาน token ของตัวเอง
+const BULLETS_PROMPT = `${COMMON_RULES}
 
-ตอบเป็น JSON อย่างเดียว ไม่มีข้อความอื่น ไม่มี markdown โครงสร้างตาม TypeScript type นี้:
+งาน: ทำ "โน้ตทบทวนก่อนสอบ" — จุดที่น่าจะออกสอบ คำศัพท์สำคัญ ประเด็นหลักของแต่ละหัวข้อ
+- ไม่เกิน 15 หัวข้อ · details หัวข้อละไม่เกิน 4 ข้อ
+- evokes = คำหรือประโยคช่วยจำสั้น ๆ
 
+โครงสร้าง JSON ตาม TypeScript type นี้:
 type TechnicalTerm = { word: string; meaning: string; rules?: string[]; cautions?: string[]; evokes?: string[] };
 type Bullet = { bulletName: string; details: string[]; examples?: string[]; keyTakeaways?: string[]; technicalTerms?: TechnicalTerm[] };
-type Slide = { topicName: string; details: string[]; examples?: string[]; keyTakeaways?: string[]; tips?: string[] };
-type Lecture = { name: string; bullets: Bullet[]; slides: Slide[] };
+type Answer = { name: string; bullets: Bullet[] };   // name = ชื่อเรื่องของเอกสาร`;
 
-- name = ชื่อเรื่องของเอกสาร
-- evokes = ประโยคหรือคำช่วยจำสั้น ๆ
-- field ที่มี ? ถ้าไม่มีเนื้อหาให้ละทิ้งไปเลย`;
+const SLIDES_PROMPT = `${COMMON_RULES}
+
+งาน: ทำ "สไลด์อธิบายใหม่" — อธิบายเนื้อหาทั้งหมดทีละหัวข้อ ด้วยภาษาที่มือใหม่เข้าใจ เรียงตามลำดับในเอกสาร
+- ไม่เกิน 15 สไลด์ · details สไลด์ละไม่เกิน 5 ข้อ
+
+โครงสร้าง JSON ตาม TypeScript type นี้:
+type Slide = { topicName: string; details: string[]; examples?: string[]; keyTakeaways?: string[]; tips?: string[] };
+type Answer = { slides: Slide[] };`;
 
 export async function summarizePdf(file: File): Promise<Lecture> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -36,6 +47,29 @@ export async function summarizePdf(file: File): Promise<Lecture> {
 
   // แปลงไฟล์ (byte) → ข้อความ base64 เพื่อแนบไปใน JSON ได้
   const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+
+  // Promise.all = ยิง 2 คำขอพร้อมกัน แล้วรอจนเสร็จทั้งคู่ (ถ้าอันไหนพัง จะพังทั้งก้อน)
+  const [bulletPart, slidePart] = await Promise.all([
+    askClaude<{ name: string; bullets: Bullet[] }>(apiKey, base64, BULLETS_PROMPT, "bullets"),
+    askClaude<{ slides: Slide[] }>(apiKey, base64, SLIDES_PROMPT, "slides"),
+  ]);
+
+  return {
+    name: bulletPart.name,
+    bullets: bulletPart.bullets,
+    slides: slidePart.slides,
+  };
+}
+
+// ส่ง PDF + คำสั่ง 1 ชุด ไปให้ Claude แล้วแปลงคำตอบเป็น JSON
+// <T> = "generic" — ผู้เรียกบอกเองว่าคาดว่าจะได้ JSON หน้าตาแบบไหนกลับมา
+async function askClaude<T>(
+  apiKey: string,
+  base64: string,
+  prompt: string,
+  label: string,
+): Promise<T> {
+  const startedAt = Date.now();
 
   const res = await fetch(CLAUDE_API_URL, {
     method: "POST",
@@ -59,7 +93,7 @@ export async function summarizePdf(file: File): Promise<Lecture> {
                 data: base64,
               },
             },
-            { type: "text", text: PROMPT },
+            { type: "text", text: prompt },
           ],
         },
       ],
@@ -68,7 +102,7 @@ export async function summarizePdf(file: File): Promise<Lecture> {
 
   if (!res.ok) {
     // log รายละเอียดไว้ดูใน Terminal แต่ไม่ส่งให้ผู้ใช้
-    console.error("Claude API error", res.status, await res.text());
+    console.error(`[${label}] Claude API error`, res.status, await res.text());
     if (res.status === 429) {
       throw new SummarizeError("มีคนใช้เยอะเกินไป รอสักครู่แล้วลองใหม่");
     }
@@ -83,7 +117,14 @@ export async function summarizePdf(file: File): Promise<Lecture> {
   const data: {
     content: { type: string; text?: string }[];
     stop_reason: string;
+    usage: { input_tokens: number; output_tokens: number };
   } = await res.json();
+
+  // ดูใน Terminal ได้ว่าแต่ละส่วนใช้เวลา/token เท่าไร (เอาไว้ปรับ MAX_OUTPUT_TOKENS)
+  const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+  console.log(
+    `[${label}] ${seconds}s · in ${data.usage.input_tokens} · out ${data.usage.output_tokens} · ${data.stop_reason}`,
+  );
 
   if (data.stop_reason === "max_tokens") {
     throw new SummarizeError("เนื้อหายาวเกินไป สรุปไม่จบ ลองแบ่งไฟล์เป็นส่วนเล็ก ๆ");
@@ -95,10 +136,10 @@ export async function summarizePdf(file: File): Promise<Lecture> {
   const jsonText = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
 
   try {
-    // TODO ก้อน 5: ตรวจว่า JSON หน้าตาตรงกับ type Lecture จริง ๆ
-    return JSON.parse(jsonText) as Lecture;
+    // TODO ก้อน 5: ตรวจว่า JSON หน้าตาตรงกับ type จริง ๆ
+    return JSON.parse(jsonText) as T;
   } catch {
-    console.error("JSON พัง:", text);
+    console.error(`[${label}] JSON พัง:`, text);
     throw new SummarizeError("สรุปออกมาผิดรูปแบบ ลองกดใหม่อีกครั้ง");
   }
 }
