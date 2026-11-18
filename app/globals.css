@@ -1,39 +1,47 @@
 @import "tailwindcss";
 
-/* สีทั้งเว็บอยู่ที่นี่ที่เดียว (single source of truth) → ใช้ใน className เช่น bg-surface, text-muted */
+/* สีทั้งเว็บอยู่ที่นี่ที่เดียว (single source of truth) → ใช้ใน className เช่น bg-surface, text-muted, border-accent/40 */
 :root {
-  --background: #f6f5f1;
+  --background: #f5f6fc;
   --surface: #ffffff;
-  --surface-2: #f1efe9;
-  --foreground: #1d1c1a;
-  --muted: #6b6860;
-  --border: #e3e0d7;
-  --accent: #2f5bd3;
-  --accent-strong: #2448ab;
-  --accent-soft: #e9eefc;
+  --surface-2: #eef0f9;
+  --foreground: #1a1b2e;
+  --muted: #5f6380;
+  --border: #dfe2f0;
+  --accent: #4f46e5; /* indigo */
+  --accent-2: #9333ea; /* violet — ใช้คู่กับ accent ทำ gradient */
+  --brand: #4f46e5; /* พื้นปุ่ม/แท็บที่มีตัวหนังสือขาวทับ */
+  --brand-2: #9333ea;
+  --accent-strong: #4338ca;
+  --accent-soft: #eceafe;
   --on-accent: #ffffff;
-  --highlight: #fff6dc;
-  --highlight-border: #efd48a;
-  --danger: #c2410c;
-  --danger-soft: #fdeee6;
+  --highlight: #fff7e0;
+  --highlight-border: #f5cf6b;
+  --danger: #dc2626;
+  --danger-soft: #fdecec;
+  --success: #059669;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #121212;
-    --surface: #1b1b1d;
-    --surface-2: #232326;
-    --foreground: #ececec;
-    --muted: #a0a0a6;
-    --border: #2f2f33;
-    --accent: #7ea2ff;
-    --accent-strong: #a3bcff;
-    --accent-soft: #1d2846;
-    --on-accent: #0f1530;
-    --highlight: #2a2416;
-    --highlight-border: #6a582a;
-    --danger: #fb923c;
-    --danger-soft: #2e1a10;
+    --background: #0c0e18;
+    --surface: #151827;
+    --surface-2: #1c2033;
+    --foreground: #eceefb;
+    --muted: #9da3c4;
+    --border: #2a2f48;
+    --accent: #818cf8;
+    --accent-2: #c084fc;
+    --brand: #5b54e8; /* dark mode: เข้มกว่า accent ตัวหนังสือขาวจะอ่านชัด */
+    --brand-2: #8b3fd9;
+    --accent-strong: #a5b4fc;
+    --accent-soft: #232650;
+    --on-accent: #ffffff;
+    --highlight: #2b2414;
+    --highlight-border: #7a5f1f;
+    --danger: #f87171;
+    --danger-soft: #2f1517;
+    --success: #34d399;
   }
 }
 
@@ -45,6 +53,9 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
@@ -52,13 +63,37 @@
   --color-highlight-border: var(--highlight-border);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
   /* ตัวอักษรอังกฤษใช้ Geist · ตัวไทยตกไปใช้ Noto Sans Thai อัตโนมัติ */
   --font-sans: var(--font-geist-sans), var(--font-noto-thai), sans-serif;
   --font-mono: var(--font-geist-mono), var(--font-noto-thai), monospace;
 }
 
 body {
-  background: var(--background);
+  /* พื้นหลังมีแสงสีจาง ๆ มุมบน ไม่ให้จืด */
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
+    radial-gradient(50rem 25rem at 95% 0%, color-mix(in oklab, var(--accent-2) 12%, transparent), transparent 70%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/* การ์ดเลื่อนขึ้นนุ่ม ๆ ตอนโผล่ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-rise {
+    animation: rise 0.35s ease-out both;
+  }
 }

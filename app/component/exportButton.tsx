@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Lecture } from "@/types/summary";
 import { DownloadIcon, Spinner } from "./icons";
+import { BUTTON_PRIMARY } from "./styles";
 
 // ปุ่มดาวน์โหลด .pptx — สร้างไฟล์ในเบราว์เซอร์เลย ไม่ต้องส่งไป server
 export function ExportButton({ lecture }: { lecture: Lecture }) {
@@ -30,7 +31,7 @@ export function ExportButton({ lecture }: { lecture: Lecture }) {
         type="button"
         onClick={handleExport}
         disabled={busy}
-        className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60"
+        className={`${BUTTON_PRIMARY} py-2 text-sm`}
       >
         {busy ? <Spinner className="size-4" /> : <DownloadIcon className="size-4" />}
         {busy ? "กำลังสร้างไฟล์..." : "ดาวน์โหลด .pptx"}
