@@ -52,7 +52,7 @@ export default function SummarizeButton({ file }: { file: File | null }) {
         disabled={status === "loading"}
         className="bg-cyan-700 w-100"
       >
-        {status === "loading" ? "กำลังอัพ..." : "อัพโหลด"}
+        {status === "loading" ? "กำลังสรุป... (อาจใช้เวลา 1-2 นาที)" : "สรุปเลย"}
       </button>
       {status === "error" && <p className="text-red-400">{errorMessage}</p>}
       {status === "done" && <pre>{JSON.stringify(result, null, 2)}</pre>}
