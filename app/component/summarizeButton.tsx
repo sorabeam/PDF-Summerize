@@ -55,7 +55,12 @@ export default function SummarizeButton({ file }: { file: File | null }) {
         {status === "loading" ? "กำลังสรุป... (อาจใช้เวลา 1-2 นาที)" : "สรุปเลย"}
       </button>
       {status === "error" && <p className="text-red-400">{errorMessage}</p>}
-      {status === "done" && <pre>{JSON.stringify(result, null, 2)}</pre>}
+      {status === "done" && (
+        // กล่องสูงไม่เกิน 70% ของจอ ยาวกว่านั้นเลื่อนดูในกล่อง · ตัดบรรทัดยาว ๆ ไม่ให้ล้นข้าง
+        <pre className="max-h-[70vh] w-full max-w-3xl overflow-auto whitespace-pre-wrap break-words text-sm bg-slate-900 p-4 rounded">
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
