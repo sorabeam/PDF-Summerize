@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PDF Summarizer
 
-## Getting Started
+เว็บช่วยอ่านหนังสือสอบ: อัพโหลด PDF → ได้ **โน้ตทบทวนก่อนสอบ** (จุดที่น่าจะออกสอบ + คำศัพท์) และ **สไลด์อธิบาย** เนื้อหาแบบมือใหม่เข้าใจ ดาวน์โหลดเป็น `.pptx` ได้
 
-First, run the development server:
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Claude API · pptxgenjs
+
+## รันบนเครื่อง
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # แล้วใส่ ANTHROPIC_API_KEY
+npm run dev                  # เปิด http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+แก้ `.env.local` แล้วต้องปิด `npm run dev` แล้วเปิดใหม่ทุกครั้ง
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## โครงสร้าง
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| ไฟล์ | หน้าที่ |
+|---|---|
+| `app/component/home.tsx` | หน้าหลัก เก็บ state ทั้งหมด (ไฟล์, สถานะ, ผลสรุป) |
+| `app/component/uploadBox.tsx` | กล่องเลือก/ลากวางไฟล์ |
+| `app/component/summaryView.tsx` | หน้าผลสรุป + แท็บ |
+| `app/component/bulletView.tsx` | โน้ตทบทวน + คลังคำศัพท์ (ซ่อนความหมายได้) |
+| `app/component/slideView.tsx` | สไลด์ทีละหน้า (ปุ่ม ← → ได้) |
+| `app/component/exportButton.tsx` | ปุ่มดาวน์โหลด .pptx |
+| `app/api/summarize/route.ts` | API: ตรวจไฟล์ → เรียก Claude |
+| `app/api/summarize/summarizePdf.ts` | ส่ง PDF ให้ Claude (bullets + slides พร้อมกัน) — **server เท่านั้น** |
+| `app/api/summarize/parseSummary.ts` | ตรวจ/ทำความสะอาด JSON ที่ Claude ตอบ |
+| `lib/exportPptx.ts` | สร้างไฟล์ .pptx ในเบราว์เซอร์ |
+| `lib/constants.ts` | ค่าตั้งต้น: ขนาดไฟล์สูงสุด, รุ่น Claude, max tokens |
+| `types/summary.ts` | type `Lecture` / `Bullet` / `Slide` / `TechnicalTerm` |
 
-## Learn More
+## Deploy บน Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. เข้า [vercel.com](https://vercel.com) → ล็อกอินด้วย GitHub → **Add New… → Project** → เลือก repo `PDF-Summerize` → **Import**
+2. ตรง **Environment Variables** ใส่ `ANTHROPIC_API_KEY` = key ของเรา (ไม่ต้องใส่ `USE_MOCK`)
+3. กด **Deploy** รอ 1–2 นาที ได้ลิงก์ `https://....vercel.app`
+4. ต่อจากนี้ merge เข้า `main` เมื่อไร Vercel deploy ให้อัตโนมัติ
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ข้อจำกัดที่ควรรู้
+- Vercel รับไฟล์ได้ไม่เกิน 4.5 MB ต่อ request → เว็บเราจำกัดไว้ที่ 4 MB (`MAX_FILE_SIZE_MB`)
+- ฟังก์ชันรันได้นานสุด 300 วินาที (ตั้ง `maxDuration = 300` ไว้แล้วใน `route.ts`)
+- ใครมีลิงก์ก็ใช้ได้ และ **ทุกครั้งที่กดสรุปเสียเงินจาก key ของเรา** → ตั้งวงเงินสูงสุดใน console.anthropic.com (Limits) ไว้ด้วย
