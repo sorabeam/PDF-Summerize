@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.1",
     "next": "16.4.6",
+    "next-auth": "^5.0.0-beta.32",
     "pptxgenjs": "^4.0.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
