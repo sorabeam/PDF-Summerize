@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { auth } from "@/auth";
 import { deleteSummary, getSummary } from "@/lib/db";
 
@@ -6,6 +7,7 @@ import { deleteSummary, getSummary } from "@/lib/db";
 
 // GET /api/history/[id] → เปิดผลสรุปเก่า 1 รายการ
 export async function GET(_request: Request, ctx: RouteContext<"/api/history/[id]">) {
+  await connection(); // ทำตอนมีคำขอจริงเท่านั้น (เหตุผลเดียวกับ page.tsx)
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {
@@ -28,6 +30,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/history/[id
 
 // DELETE /api/history/[id] → ลบออกจากประวัติ
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/history/[id]">) {
+  await connection(); // ทำตอนมีคำขอจริงเท่านั้น (เหตุผลเดียวกับ page.tsx)
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {

@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { auth } from "@/auth";
 import { listSummaries } from "@/lib/db";
 
 // GET /api/history → รายการสรุปที่เคยทำของคนที่ login อยู่ (ใหม่สุดก่อน)
 export async function GET() {
+  await connection(); // ทำตอนมีคำขอจริงเท่านั้น (เหตุผลเดียวกับ page.tsx)
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {
