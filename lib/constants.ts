@@ -7,3 +7,5 @@ export const CLAUDE_MODEL = "claude-sonnet-5-5";
 // จำนวน token สูงสุดที่ Claude ตอบได้ "ต่อ 1 คำขอ" (bullets กับ slides แยกกันคนละเพดาน)
 // ภาษาไทยกิน token เยอะ · ตั้งสูงเกินไปก็ไม่ดี: ยิ่งยาวยิ่งรอนาน (fetch ของ Node รอได้ราว 5 นาที)
 export const MAX_OUTPUT_TOKENS = 24000;
+// สรุปได้กี่ไฟล์ต่อคนต่อ 24 ชั่วโมง (กันคนเดียวใช้ API key ของเราจนหมดวงเงิน)
+export const DAILY_SUMMARY_LIMIT = 20;
