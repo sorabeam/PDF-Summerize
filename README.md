@@ -14,6 +14,25 @@ npm run dev                  # เปิด http://localhost:3000
 
 แก้ `.env.local` แล้วต้องปิด `npm run dev` แล้วเปิดใหม่ทุกครั้ง
 
+## ตั้งค่า Login + ประวัติ (ครั้งแรกครั้งเดียว)
+
+ต้อง login ด้วย Google ก่อนถึงจะสรุปได้ และผลสรุปทุกไฟล์เก็บใน Neon Postgres (`USE_MOCK=1` ข้ามทั้งสองอย่างได้)
+
+1. **ติดตั้งแพ็กเกจ** `npm install next-auth@beta @neondatabase/serverless` แล้ว commit `package.json` + `package-lock.json`
+2. **Google OAuth** ที่ [Google Cloud Console](https://console.cloud.google.com/) → สร้างโปรเจกต์ → **APIs & Services → OAuth consent screen** (External, ใส่ชื่อแอป + อีเมล แล้วกด **Publish app** ไม่งั้นใช้ได้แค่บัญชีที่เพิ่มเป็น test user)
+   → **Credentials → Create credentials → OAuth client ID** (Web application) ใส่ **Authorized redirect URIs**:
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://pdf-summerize.vercel.app/api/auth/callback/google`
+
+   ได้ Client ID / Client secret → ใส่เป็น `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`
+3. **AUTH_SECRET** รัน `npx auth secret` (เขียนลง `.env.local` ให้เอง) · บน Vercel ใส่ค่าที่สุ่มใหม่ก็ได้
+4. **ฐานข้อมูล** Vercel → โปรเจกต์ → **Storage → Create Database → Neon** → Connect กับโปรเจกต์ (จะได้ `DATABASE_URL` อัตโนมัติ) · ก๊อปค่ามาใส่ `.env.local` ด้วย
+5. **สร้างตาราง** เปิด Neon Console → **SQL Editor** → วางไฟล์ `db/schema.sql` แล้วกด Run
+6. ใส่ `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` ใน Vercel → Settings → Environment Variables แล้ว Redeploy
+
+ข้อจำกัด: Google login ใช้ได้เฉพาะ URL ที่ใส่ใน redirect URIs → ลิงก์ Preview ของแต่ละ PR จะ login ไม่ได้ (ทดสอบบนเครื่องแทน)
+สรุปได้ไม่เกิน `DAILY_SUMMARY_LIMIT` (20) ไฟล์ต่อคนต่อ 24 ชม. แก้ได้ใน `lib/constants.ts`
+
 ## โครงสร้าง
 
 | ไฟล์ | หน้าที่ |
@@ -29,7 +48,11 @@ npm run dev                  # เปิด http://localhost:3000
 | `app/api/summarize/summarizePdf.ts` | ส่ง PDF ให้ Claude (bullets + slides พร้อมกัน) — **server เท่านั้น** |
 | `app/api/summarize/parseSummary.ts` | ตรวจ/ทำความสะอาด JSON ที่ Claude ตอบ |
 | `lib/exportPptx.ts` | สร้างไฟล์ .pptx ในเบราว์เซอร์ |
-| `lib/constants.ts` | ค่าตั้งต้น: ขนาดไฟล์สูงสุด, รุ่น Claude, max tokens |
+| `lib/constants.ts` | ค่าตั้งต้น: ขนาดไฟล์สูงสุด, รุ่น Claude, max tokens, โควตาต่อวัน |
+| `auth.ts` · `app/actions.ts` | ตั้งค่า login Google (Auth.js) · ปุ่มเข้า/ออกจากระบบ |
+| `lib/db.ts` · `db/schema.sql` | อ่าน/เขียนประวัติใน Neon (server เท่านั้น) · คำสั่งสร้างตาราง |
+| `app/api/history/` | API ประวัติ: รายการ / เปิด / ลบ |
+| `app/component/historyList.tsx` · `loginCard.tsx` | รายการ "สรุปที่เคยทำ" · การ์ดเข้าสู่ระบบ |
 | `types/summary.ts` | type `Lecture` / `Bullet` / `Slide` / `TechnicalTerm` |
 | `app/globals.css` | สีธีม "สมุดโน้ต" + เส้นบรรทัดพื้นหลัง (แก้สีที่นี่ที่เดียว) |
 
