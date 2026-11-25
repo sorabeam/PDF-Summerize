@@ -42,9 +42,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const lecture = await summarizePdf(uploadedFile);
+    // request.signal จะ abort เมื่อผู้ใช้กด "ยกเลิกการสรุป" (หรือปิดหน้าเว็บ)
+    const lecture = await summarizePdf(uploadedFile, request.signal);
     return Response.json(lecture);
   } catch (err) {
+    if (request.signal.aborted) {
+      // ผู้ใช้ยกเลิกเอง ไม่ใช่ error → ไม่ต้อง log ยาว ๆ (ไม่มีใครรอรับคำตอบนี้แล้ว)
+      console.log("ผู้ใช้ยกเลิกการสรุป");
+      return new Response(null, { status: 499 });
+    }
     // SummarizeError = เราตั้งใจโยน ข้อความโชว์ผู้ใช้ได้ · อย่างอื่น = บั๊ก/ตั้งค่าผิด
     if (err instanceof SummarizeError) {
       return Response.json({ error: err.message }, { status: 502 });

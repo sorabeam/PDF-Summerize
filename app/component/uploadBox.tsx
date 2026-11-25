@@ -1,34 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import { MAX_FILE_SIZE_MB } from "@/lib/constants";
 import { formatFileSize } from "@/lib/fileCheck";
-import { FileIcon, UploadIcon } from "./icons";
+import { FileIcon, Tape } from "./icons";
+import { BUTTON_PRIMARY, BUTTON_SECONDARY, PAPER_CARD } from "./styles";
 
-type UploadBoxProps = {
+type UploadCardProps = {
   file: File | null;
-  error: string | null;
-  disabled: boolean;
+  fileError: string | null; // ไฟล์ผิดเงื่อนไข (ตรวจฝั่ง client)
+  submitError: string; // สรุปไม่สำเร็จ (ข้อความจาก server)
   onPick: (file: File | null) => void;
+  onSubmit: () => void;
 };
 
-// กล่องเลือกไฟล์: คลิกเพื่อเลือก หรือ ลากไฟล์มาวาง (drag & drop)
-export function UploadBox({ file, error, disabled, onPick }: UploadBoxProps) {
+// การ์ดกระดาษสำหรับเลือกไฟล์: ลากมาวาง หรือกดปุ่มเลือก → มีไฟล์แล้วค่อยกด "สรุปเลย"
+export function UploadCard({ file, fileError, submitError, onPick, onSubmit }: UploadCardProps) {
   const [isDragging, setIsDragging] = useState(false);
+  // useId = สร้าง id ที่ไม่ซ้ำ เอาไว้ผูก <label htmlFor> กับ <input> (ปุ่มกี่ปุ่มก็เปิดหน้าต่างเลือกไฟล์ได้)
+  const inputId = useId();
+  const canSubmit = file !== null && fileError === null;
 
-  // สีกล่องเปลี่ยนตามสถานะ: ผิด = แดง · ลากอยู่ = ม่วงเข้ม ขยายนิดนึง · มีไฟล์ = ขอบม่วง · ปกติ = ชี้แล้วเรือง
-  const stateStyle = error
+  const dropStyle = fileError
     ? "border-danger bg-danger-soft"
     : isDragging
-      ? "scale-[1.02] border-accent bg-accent-soft shadow-xl shadow-accent/20"
-      : file
-        ? "border-accent/60 bg-surface shadow-lg shadow-accent/10"
-        : "border-accent/30 bg-surface hover:border-accent hover:bg-accent-soft/50 hover:shadow-xl hover:shadow-accent/15";
+      ? "border-pen bg-pen-soft"
+      : "border-muted/60 hover:border-ink hover:bg-pen-soft/40";
 
   return (
-    <div>
-      {/* <label> ห่อ <input> ไว้ → คลิกตรงไหนของกล่องก็เปิดหน้าต่างเลือกไฟล์ */}
+    <div className={`${PAPER_CARD} p-5 pt-8 sm:p-10 sm:pt-12`}>
+      <Tape />
+
+      <input
+        id={inputId}
+        type="file"
+        accept="application/pdf"
+        className="peer sr-only"
+        onChange={(e) => {
+          onPick(e.target.files?.[0] ?? null);
+          e.target.value = ""; // เคลียร์ค่า → เลือกไฟล์เดิมซ้ำได้
+        }}
+      />
+
       <label
-        className={`group flex cursor-pointer flex-col items-center gap-3 rounded-3xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 focus-within:ring-4 focus-within:ring-accent/30 ${stateStyle} ${disabled ? "pointer-events-none opacity-60" : ""}`}
+        htmlFor={inputId}
+        className={`flex cursor-pointer flex-col items-center gap-2 rounded-[10px] border-[1.5px] border-dashed px-4 py-7 text-center transition-colors duration-150 peer-focus-visible:ring-[3px] peer-focus-visible:ring-pen sm:py-9 ${dropStyle}`}
         onDragOver={(e) => {
           e.preventDefault(); // ต้องมี ไม่งั้น browser จะเปิดไฟล์แทน
           setIsDragging(true);
@@ -40,50 +56,59 @@ export function UploadBox({ file, error, disabled, onPick }: UploadBoxProps) {
           onPick(e.dataTransfer.files[0] ?? null);
         }}
       >
-        <input
-          type="file"
-          accept="application/pdf"
-          className="sr-only"
-          disabled={disabled}
-          onChange={(e) => {
-            onPick(e.target.files?.[0] ?? null);
-            e.target.value = ""; // เคลียร์ค่า → เลือกไฟล์เดิมซ้ำได้
-          }}
-        />
-
+        <FileIcon className={`size-9 ${fileError ? "text-danger" : "text-ink"}`} />
         {file ? (
           <>
-            <span
-              className={`grid size-16 place-items-center rounded-2xl shadow-lg ${error ? "bg-danger text-white shadow-danger/30" : "bg-linear-to-br from-brand to-brand-2 text-white shadow-accent/30"}`}
-            >
-              <FileIcon className="size-8" />
-            </span>
-            <div>
-              <p className="font-semibold break-all">{file.name}</p>
-              <p className="text-sm text-muted">{formatFileSize(file.size)}</p>
-            </div>
-            <span className="rounded-full border border-accent/30 px-3 py-1 text-sm font-medium text-accent transition-colors group-hover:bg-accent group-hover:text-on-accent">
-              เปลี่ยนไฟล์
-            </span>
+            <span className="font-semibold break-all">{file.name}</span>
+            <span className="text-sm text-muted">{formatFileSize(file.size)}</span>
           </>
         ) : (
           <>
-            <span className="grid size-16 place-items-center rounded-2xl bg-accent-soft text-accent transition-all duration-200 group-hover:-translate-y-1 group-hover:bg-linear-to-br group-hover:from-brand group-hover:to-brand-2 group-hover:text-white group-hover:shadow-lg group-hover:shadow-accent/30">
-              <UploadIcon className="size-8" />
+            {/* มือถือลากไฟล์ไม่ได้ → เปลี่ยนข้อความตามขนาดจอ */}
+            <span className="font-serif text-xl font-bold sm:text-2xl">
+              <span className="sm:hidden">แตะเพื่อเลือกไฟล์ PDF</span>
+              <span className="hidden sm:inline">วางไฟล์ PDF ที่นี่</span>
             </span>
-            <div>
-              <p className="font-semibold">ลากไฟล์ PDF มาวางตรงนี้</p>
-              <p className="text-sm text-muted">
-                หรือ <span className="font-medium text-accent underline underline-offset-4">คลิกเพื่อเลือกไฟล์</span>
-              </p>
-            </div>
+            <span className="text-sm text-muted">
+              <span className="sm:hidden">ไฟล์ .pdf ขนาดไม่เกิน {MAX_FILE_SIZE_MB} MB</span>
+              <span className="hidden sm:inline">ลากมาวาง หรือกดปุ่มด้านล่าง</span>
+            </span>
           </>
         )}
       </label>
 
-      {error && (
-        <p role="alert" className="mt-2 flex items-center gap-1.5 text-sm font-medium text-danger">
-          ⚠ {error}
+      {fileError && (
+        <p role="alert" className="mt-3 text-sm font-medium text-danger">
+          {fileError}
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-col items-stretch gap-3 sm:items-center">
+        {file ? (
+          <div className="flex flex-col gap-3 sm:flex-row-reverse">
+            <button type="button" onClick={onSubmit} disabled={!canSubmit} className={BUTTON_PRIMARY}>
+              สรุปเลย
+            </button>
+            <label htmlFor={inputId} className={`${BUTTON_SECONDARY} cursor-pointer`}>
+              เปลี่ยนไฟล์
+            </label>
+          </div>
+        ) : (
+          <label htmlFor={inputId} className={`${BUTTON_PRIMARY} cursor-pointer`}>
+            เลือกไฟล์ PDF
+          </label>
+        )}
+        <p className="text-center text-[13px] text-muted">
+          ไฟล์ .pdf ไม่เกิน {MAX_FILE_SIZE_MB} MB · สรุปเสร็จในราว 1–2 นาที
+        </p>
+      </div>
+
+      {submitError && (
+        <p
+          role="alert"
+          className="mt-5 rounded-[10px] border-[1.5px] border-danger bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
+        >
+          {submitError}
         </p>
       )}
     </div>

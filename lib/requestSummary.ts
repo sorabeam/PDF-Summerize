@@ -2,13 +2,14 @@ import type { Lecture } from "@/types/summary";
 
 // ส่งไฟล์ไปให้ /api/summarize แล้วรอผล (ฝั่ง client)
 // สำเร็จ → คืน Lecture · ไม่สำเร็จ → throw Error ที่ข้อความโชว์ผู้ใช้ได้เลย
-export async function requestSummary(file: File): Promise<Lecture> {
+// signal = ใช้ยกเลิกกลางทาง (AbortController ใน home.tsx) → fetch จะ throw ทันที
+export async function requestSummary(file: File, signal?: AbortSignal): Promise<Lecture> {
   const formData = new FormData();
   formData.append("uploadedFile", file);
 
   let res: Response;
   try {
-    res = await fetch("/api/summarize", { method: "POST", body: formData });
+    res = await fetch("/api/summarize", { method: "POST", body: formData, signal });
   } catch {
     // fetch พังเอง = ติดต่อ server ไม่ได้เลย (server ปิด / เน็ตหลุด)
     throw new Error("ติดต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");

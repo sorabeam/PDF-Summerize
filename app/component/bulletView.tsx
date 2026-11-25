@@ -2,79 +2,117 @@
 
 import { useState } from "react";
 import type { Bullet, TechnicalTerm } from "@/types/summary";
-import { CARD, CARD_HOVER, BUTTON_SECONDARY, colorAt } from "./styles";
+import { EyeIcon, EyeOffIcon } from "./icons";
+import { BUTTON_SECONDARY, CARD, FOCUS, SECTION_RULE } from "./styles";
 
-// โน้ตทบทวนก่อนสอบ: การ์ดเรียงเป็นตาราง grid + คลังคำศัพท์ท้ายหน้า (ซ่อนความหมายเพื่อทดสอบตัวเองได้)
+type Columns = 1 | 2 | 3;
+
+// เขียน class เต็ม ๆ ไว้ (ห้ามต่อสตริงตอนรัน ไม่งั้น Tailwind หาไม่เจอ)
+const GRID_COLUMNS: Record<Columns, string> = {
+  1: "grid-cols-1",
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-2 xl:grid-cols-3",
+};
+
+// โน้ตทบทวนก่อนสอบ: การ์ดหัวข้อ (ไฮไลต์จุดออกสอบ) + คลังคำศัพท์ท้ายหน้า (ปิดความหมายเพื่อทดสอบตัวเองได้)
 export function BulletView({ bullets }: { bullets: Bullet[] }) {
-  // รวมคำศัพท์จากทุกหัวข้อมาไว้ที่เดียว พร้อมจำว่ามาจากหัวข้อที่เท่าไร (ใช้ระบายสีให้ตรงกัน)
-  const allTerms = bullets.flatMap((bullet, index) =>
-    (bullet.technicalTerms ?? []).map((term) => ({ term, topicIndex: index })),
-  );
+  const [columns, setColumns] = useState<Columns>(2);
+  const hasExamPoints = bullets.some((bullet) => bullet.details.some((d) => d.exam));
+  const allTerms = bullets.flatMap((bullet) => bullet.technicalTerms ?? []);
 
   return (
-    <div className="flex flex-col gap-10">
-      {/* grid: มือถือ 1 คอลัมน์ · แท็บเล็ต 2 · จอใหญ่ 3 · การ์ดในแถวเดียวกันสูงเท่ากัน */}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {bullets.map((bullet, index) => (
-          <BulletCard key={index} bullet={bullet} index={index} />
-        ))}
+    <div className="flex flex-col gap-8 sm:gap-10">
+      <div className="flex flex-col gap-5 sm:gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {hasExamPoints ? (
+            <p className="text-sm text-muted sm:text-[15px]">
+              <mark className="rounded-[3px] bg-hl/75 px-1.5 py-px font-medium text-ink">ข้อความที่ไฮไลต์</mark>{" "}
+              คือจุดที่น่าจะออกสอบ
+            </p>
+          ) : (
+            <span />
+          )}
+
+          {/* มือถือแสดงคอลัมน์เดียวอยู่แล้ว → ซ่อนตัวเลือกนี้ */}
+          <div className="hidden items-center gap-2.5 md:flex">
+            <span id="columns-label" className="text-sm text-muted">
+              คอลัมน์
+            </span>
+            <div
+              role="radiogroup"
+              aria-labelledby="columns-label"
+              className="flex overflow-hidden rounded-lg border-[1.5px] border-ink"
+            >
+              {([1, 2, 3] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={columns === n}
+                  onClick={() => setColumns(n)}
+                  className={`px-3.5 py-1 text-sm font-semibold tabular-nums ${FOCUS} ${columns === n ? "bg-ink text-paper" : "text-ink hover:bg-pen-soft"} ${n === 3 ? "hidden xl:block" : ""}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className={`grid items-start gap-4 sm:gap-6 ${GRID_COLUMNS[columns]}`}>
+          {bullets.map((bullet, index) => (
+            <BulletCard key={index} bullet={bullet} index={index} />
+          ))}
+        </div>
       </div>
-      {allTerms.length > 0 && <Glossary entries={allTerms} />}
+
+      {allTerms.length > 0 && <Glossary terms={allTerms} />}
     </div>
   );
 }
 
 function BulletCard({ bullet, index }: { bullet: Bullet; index: number }) {
-  const color = colorAt(index);
-
   return (
-    <article
-      className={`${CARD_HOVER} animate-rise relative flex flex-col overflow-hidden p-5`}
-      style={{ animationDelay: `${index * 40}ms` }}
-    >
-      {/* แถบสีด้านบนการ์ด */}
-      <div className={`absolute inset-x-0 top-0 h-1.5 bg-linear-to-r ${color.bar}`} />
+    <article className={`${CARD} flex flex-col p-5 sm:p-6`}>
+      <p className="text-[13px] font-medium text-pen tabular-nums">หัวข้อ {index + 1}</p>
+      <h3 className="mt-1 font-serif text-[19px] leading-snug font-bold sm:text-xl">{bullet.bulletName}</h3>
 
-      <div className="flex items-start gap-3">
-        <span
-          className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg text-sm font-bold tabular-nums ${color.badge}`}
-        >
-          {index + 1}
-        </span>
-        <h3 className="text-lg font-semibold leading-snug">{bullet.bulletName}</h3>
-      </div>
-
-      <ul className="mt-4 space-y-2 leading-relaxed">
+      <ul className="mt-3 space-y-2 leading-[1.65]">
         {bullet.details.map((detail, i) => (
-          <li key={i} className="flex gap-2">
-            <span className={`mt-2.5 size-1.5 shrink-0 rounded-full bg-linear-to-r ${color.bar}`} />
-            <span>{detail}</span>
+          <li key={i} className="flex gap-2.5">
+            <span aria-hidden className="text-muted">
+              •
+            </span>
+            {detail.exam ? (
+              // box-decoration-break: clone = ข้อความขึ้นบรรทัดใหม่แล้วไฮไลต์ยังมีมุมโค้ง/ระยะขอบทุกบรรทัด
+              <span>
+                <mark className="rounded-[3px] bg-hl/75 px-1.5 py-px text-ink [box-decoration-break:clone]">
+                  <span className="sr-only">จุดที่น่าจะออกสอบ: </span>
+                  {detail.text}
+                </mark>
+              </span>
+            ) : (
+              <span>{detail.text}</span>
+            )}
           </li>
         ))}
       </ul>
 
-      {bullet.keyTakeaways && (
-        <Callout title="⭐ จำให้ขึ้นใจ" tone="highlight" items={bullet.keyTakeaways} />
-      )}
-      {bullet.examples && (
-        <Callout title="ตัวอย่าง" tone="plain" items={bullet.examples} />
-      )}
+      {bullet.keyTakeaways && <Callout title="สรุปสั้น ๆ" tone="pen" items={bullet.keyTakeaways} />}
+      {bullet.examples && <Callout title="ตัวอย่าง" tone="plain" items={bullet.examples} />}
 
       {/* คำศัพท์ในหัวข้อนี้ = ป้ายเล็ก ๆ (ความหมายเต็มอยู่ในคลังคำศัพท์ด้านล่าง) */}
       {bullet.technicalTerms && (
-        <div className="mt-auto pt-4">
-          <p className="mb-2 text-xs font-semibold text-muted">คำศัพท์</p>
-          <div className="flex flex-wrap gap-1.5">
-            {bullet.technicalTerms.map((term, i) => (
-              <span
-                key={i}
-                title={term.meaning}
-                className={`cursor-help rounded-full border px-2.5 py-0.5 text-xs font-medium ${color.chip}`}
-              >
-                {term.word}
-              </span>
-            ))}
-          </div>
+        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-rule pt-4">
+          {bullet.technicalTerms.map((term, i) => (
+            <span
+              key={i}
+              title={term.meaning}
+              className="cursor-help rounded-md border border-rule bg-background px-2 py-0.5 text-[13px] font-medium"
+            >
+              {term.word}
+            </span>
+          ))}
         </div>
       )}
     </article>
@@ -82,6 +120,7 @@ function BulletCard({ bullet, index }: { bullet: Bullet; index: number }) {
 }
 
 // กล่องหัวข้อย่อย (ใช้ซ้ำทั้งใน BulletView และ SlideView)
+// tone "hl" (เหลือง) = สิ่งที่ต้องจำ · "pen" (ฟ้า) = สรุป/ทริค · "plain" = ตัวอย่าง
 export function Callout({
   title,
   items,
@@ -89,18 +128,18 @@ export function Callout({
 }: {
   title: string;
   items: string[];
-  tone: "highlight" | "plain" | "accent";
+  tone: "hl" | "pen" | "plain";
 }) {
   const style = {
-    highlight: "bg-highlight border-highlight-border",
-    plain: "bg-surface-2 border-border",
-    accent: "bg-accent-soft border-accent/30",
+    hl: "bg-hl/75",
+    pen: "bg-pen-soft",
+    plain: "border border-rule bg-background",
   }[tone];
 
   return (
-    <div className={`mt-4 rounded-xl border px-4 py-3 ${style}`}>
-      <p className="mb-1 text-xs font-semibold text-muted">{title}</p>
-      <ul className="space-y-1 text-[0.95rem] leading-relaxed">
+    <div className={`mt-4 rounded-md px-4 py-3 ${style}`}>
+      <p className="mb-1 text-[13px] font-semibold text-ink/70">{title}</p>
+      <ul className="space-y-1 text-[15px] leading-relaxed">
         {items.map((item, i) => (
           <li key={i} className="whitespace-pre-wrap">
             {item}
@@ -111,9 +150,7 @@ export function Callout({
   );
 }
 
-type GlossaryEntry = { term: TechnicalTerm; topicIndex: number };
-
-function Glossary({ entries }: { entries: GlossaryEntry[] }) {
+function Glossary({ terms }: { terms: TechnicalTerm[] }) {
   const [quizMode, setQuizMode] = useState(false);
   // เก็บว่าเปิดดูคำไหนไปแล้วบ้าง (เก็บเป็นเลข index)
   const [revealed, setRevealed] = useState<number[]>([]);
@@ -124,63 +161,84 @@ function Glossary({ entries }: { entries: GlossaryEntry[] }) {
   }
 
   return (
-    <section>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-semibold">
-            คลังคำศัพท์{" "}
-            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-sm text-accent">
-              {entries.length}
-            </span>
-          </h3>
-          <p className="mt-1 text-sm text-muted">
-            {quizMode ? "นึกความหมายก่อน แล้วค่อยแตะการ์ดเพื่อเฉลย" : "ทุกคำจากทุกหัวข้อ รวมไว้ที่เดียว"}
-          </p>
+    <section className={SECTION_RULE}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-serif text-[22px] font-bold sm:text-[26px]">คลังคำศัพท์</h2>
+          {quizMode ? (
+            <span className="text-[13px] font-medium text-pen">โหมดทดสอบ</span>
+          ) : (
+            <span className="text-[15px] text-muted tabular-nums">{terms.length} คำ</span>
+          )}
         </div>
-        <button type="button" onClick={toggleQuizMode} className={BUTTON_SECONDARY}>
-          {quizMode ? "เฉลยทั้งหมด" : "🧠 โหมดทดสอบตัวเอง"}
+        <button type="button" onClick={toggleQuizMode} className={`${BUTTON_SECONDARY} text-[15px]`}>
+          {quizMode ? (
+            "ออกจากโหมดทดสอบ"
+          ) : (
+            <>
+              <EyeOffIcon className="size-[18px]" /> เริ่มโหมดทดสอบ
+            </>
+          )}
         </button>
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {entries.map(({ term, topicIndex }, i) => {
+      {quizMode ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted tabular-nums sm:text-[15px]" aria-live="polite">
+            เปิดดูแล้ว {revealed.length} จาก {terms.length} คำ
+          </p>
+          <button
+            type="button"
+            onClick={() => setRevealed(terms.map((_, i) => i))}
+            disabled={revealed.length === terms.length}
+            className={`${BUTTON_SECONDARY} px-3 py-1.5 text-sm`}
+          >
+            <EyeIcon className="size-4" /> แสดงทั้งหมด
+          </button>
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-muted sm:text-[15px]">
+          โหมดทดสอบจะปิดความหมายไว้ ลองนึกคำตอบก่อนแล้วค่อยแตะเพื่อเปิดดู
+        </p>
+      )}
+
+      <dl className="mt-3 grid gap-x-6 md:grid-cols-2">
+        {terms.map((term, i) => {
           const hidden = quizMode && !revealed.includes(i);
-          const color = colorAt(topicIndex);
           return (
             <div
               key={i}
-              className={`${CARD} relative overflow-hidden p-4 ${hidden ? "transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md" : ""}`}
+              className="border-b border-rule py-3.5 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-x-4"
             >
-              <div className={`absolute inset-y-0 left-0 w-1 bg-linear-to-b ${color.bar}`} />
               <dt className="font-semibold">{term.word}</dt>
               {hidden ? (
-                <dd className="mt-1">
-                  {/* after:absolute after:inset-0 = ขยายพื้นที่กดให้เต็มการ์ด */}
+                <dd className="mt-2 sm:col-start-2 sm:mt-0">
                   <button
                     type="button"
                     onClick={() => setRevealed([...revealed, i])}
-                    className="text-sm text-accent after:absolute after:inset-0 focus-visible:outline-none focus-visible:underline"
+                    className={`flex w-full items-center gap-2 rounded-md border border-dashed border-ink/25 bg-hl/35 px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-hl/60 ${FOCUS}`}
                   >
-                    แตะเพื่อดูความหมาย
+                    <EyeIcon className="size-4 shrink-0" />
+                    ลองนึกก่อน แล้วแตะเพื่อดูความหมาย
                   </button>
                 </dd>
               ) : (
                 <>
-                  <dd className="mt-1 text-sm leading-relaxed">{term.meaning}</dd>
+                  <dd className="mt-1 text-[15px] leading-relaxed text-muted sm:col-start-2 sm:mt-0">
+                    {term.meaning}
+                  </dd>
                   {term.rules?.map((rule, j) => (
-                    <dd key={`r${j}`} className="mt-1 text-xs text-muted">
+                    <dd key={`r${j}`} className="mt-1 text-sm text-muted sm:col-start-2">
                       • {rule}
                     </dd>
                   ))}
                   {term.cautions?.map((caution, j) => (
-                    <dd key={`c${j}`} className="mt-1 text-xs text-danger">
-                      ⚠ {caution}
+                    <dd key={`c${j}`} className="mt-1 text-sm text-danger sm:col-start-2">
+                      ระวัง: {caution}
                     </dd>
                   ))}
                   {term.evokes && (
-                    <dd className="mt-2 inline-block rounded-md bg-surface-2 px-2 py-0.5 text-xs italic text-muted">
-                      💡 {term.evokes.join(" · ")}
-                    </dd>
+                    <dd className="mt-1.5 text-sm text-pen sm:col-start-2">ช่วยจำ: {term.evokes.join(", ")}</dd>
                   )}
                 </>
               )}

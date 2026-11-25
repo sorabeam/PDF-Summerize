@@ -4,8 +4,14 @@
     {
       "bulletName": "ระบบจัดการชนิดข้อมูลขั้นสูง (Advanced Type Systems)",
       "details": [
-        "การใช้ความสามารถของระบบ Type ใน TypeScript เพื่อเขียนโค้ดที่ปลอดภัยและอธิบายตัวเองได้",
-        "การประยุกต์ใช้ Conditional Types และ Mapped Types เพื่อแปลงโครงสร้างข้อมูลที่ซับซ้อน"
+        {
+          "text": "การใช้ความสามารถของระบบ Type ใน TypeScript เพื่อเขียนโค้ดที่ปลอดภัยและอธิบายตัวเองได้",
+          "exam": true
+        },
+        {
+          "text": "การประยุกต์ใช้ Conditional Types และ Mapped Types เพื่อแปลงโครงสร้างข้อมูลที่ซับซ้อน",
+          "exam": false
+        }
       ],
       "examples": [
         "type Res = T extends U ? X : Y;"
@@ -77,8 +83,14 @@
     {
       "bulletName": "การจัดการสถานะใน React (State Management)",
       "details": [
-        "การจัดการ State ทั้งในระดับ Local และ Global อย่างมีประสิทธิภาพในแอปพลิเคชันสมัยใหม่",
-        "การหลีกเลี่ยงปัญหาการส่ง Props ข้ามหลายชั้น (Prop Drilling) และการลดการ Re-render ที่ไม่จำเป็น"
+        {
+          "text": "การจัดการ State ทั้งในระดับ Local และ Global อย่างมีประสิทธิภาพในแอปพลิเคชันสมัยใหม่",
+          "exam": false
+        },
+        {
+          "text": "การหลีกเลี่ยงปัญหาการส่ง Props ข้ามหลายชั้น (Prop Drilling) และการลดการ Re-render ที่ไม่จำเป็น",
+          "exam": true
+        }
       ],
       "examples": [
         "const [state, dispatch] = useReducer(reducer, initialState);"
@@ -134,8 +146,14 @@
     {
       "bulletName": "การเพิ่มประสิทธิภาพการทำงาน (Performance Optimization)",
       "details": [
-        "เทคนิคการลดระยะเวลาการโหลดหน้าเว็บและการเพิ่มความลื่นไหลในการทำงานของแอปพลิเคชัน",
-        "การลดขนาดไฟล์ Bundle และการป้องกันการคำนวณซ้ำซ้อน"
+        {
+          "text": "เทคนิคการลดระยะเวลาการโหลดหน้าเว็บและการเพิ่มความลื่นไหลในการทำงานของแอปพลิเคชัน",
+          "exam": true
+        },
+        {
+          "text": "การลดขนาดไฟล์ Bundle และการป้องกันการคำนวณซ้ำซ้อน",
+          "exam": false
+        }
       ],
       "examples": [
         "const memoizedValue = useMemo(() => compute(A, B), [A, B]);"

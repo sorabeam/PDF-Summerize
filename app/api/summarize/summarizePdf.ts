@@ -26,11 +26,14 @@ const BULLETS_PROMPT = `${COMMON_RULES}
 
 งาน: ทำ "โน้ตทบทวนก่อนสอบ" — จุดที่น่าจะออกสอบ คำศัพท์สำคัญ ประเด็นหลักของแต่ละหัวข้อ
 - ไม่เกิน 15 หัวข้อ · details หัวข้อละไม่เกิน 4 ข้อ
+- exam = true เฉพาะข้อที่น่าจะออกสอบจริง ๆ เช่น นิยาม สูตร การเปรียบเทียบ ข้อที่เอกสารเน้นย้ำ หรือจุดที่คนมักสับสน
+  ประมาณ 1–2 ข้อต่อหัวข้อ ห้ามตั้ง true ทุกข้อ (ถ้าทุกข้อเด่นเท่ากัน ก็ไม่มีข้อไหนเด่น) ข้ออื่นให้เป็น false
 - evokes = คำหรือประโยคช่วยจำสั้น ๆ
 
 โครงสร้าง JSON ตาม TypeScript type นี้:
 type TechnicalTerm = { word: string; meaning: string; rules?: string[]; cautions?: string[]; evokes?: string[] };
-type Bullet = { bulletName: string; details: string[]; examples?: string[]; keyTakeaways?: string[]; technicalTerms?: TechnicalTerm[] };
+type Detail = { text: string; exam: boolean };   // exam = จุดที่น่าจะออกสอบ
+type Bullet = { bulletName: string; details: Detail[]; examples?: string[]; keyTakeaways?: string[]; technicalTerms?: TechnicalTerm[] };
 type Answer = { name: string; bullets: Bullet[] };   // name = ชื่อเรื่องของเอกสาร`;
 
 const SLIDES_PROMPT = `${COMMON_RULES}
@@ -42,7 +45,8 @@ const SLIDES_PROMPT = `${COMMON_RULES}
 type Slide = { topicName: string; details: string[]; examples?: string[]; keyTakeaways?: string[]; tips?: string[] };
 type Answer = { slides: Slide[] };`;
 
-export async function summarizePdf(file: File): Promise<Lecture> {
+// signal = สัญญาณ "ผู้ใช้กดยกเลิกแล้ว" → ส่งต่อให้ fetch หยุดรอ Claude ทันที (ไม่เสียเงินต่อ)
+export async function summarizePdf(file: File, signal?: AbortSignal): Promise<Lecture> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     // ข้อความนี้สำหรับ dev — ผู้ใช้เห็นแค่ข้อความกลาง ๆ จาก route.ts
@@ -54,8 +58,8 @@ export async function summarizePdf(file: File): Promise<Lecture> {
 
   // Promise.all = ยิง 2 คำขอพร้อมกัน แล้วรอจนเสร็จทั้งคู่ (ถ้าอันไหนพัง จะพังทั้งก้อน)
   const [bulletPart, slidePart] = await Promise.all([
-    askClaude(apiKey, base64, BULLETS_PROMPT, "bullets", parseBulletPart),
-    askClaude(apiKey, base64, SLIDES_PROMPT, "slides", parseSlidePart),
+    askClaude(apiKey, base64, BULLETS_PROMPT, "bullets", parseBulletPart, signal),
+    askClaude(apiKey, base64, SLIDES_PROMPT, "slides", parseSlidePart, signal),
   ]);
 
   return {
@@ -73,11 +77,13 @@ async function askClaude<T>(
   prompt: string,
   label: string,
   parse: (raw: unknown) => T | null,
+  signal?: AbortSignal,
 ): Promise<T> {
   const startedAt = Date.now();
 
   const res = await fetch(CLAUDE_API_URL, {
     method: "POST",
+    signal,
     headers: {
       "content-type": "application/json",
       "x-api-key": apiKey,

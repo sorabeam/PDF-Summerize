@@ -19,9 +19,10 @@ npm run dev                  # เปิด http://localhost:3000
 | ไฟล์ | หน้าที่ |
 |---|---|
 | `app/component/home.tsx` | หน้าหลัก เก็บ state ทั้งหมด (ไฟล์, สถานะ, ผลสรุป) |
-| `app/component/uploadBox.tsx` | กล่องเลือก/ลากวางไฟล์ |
+| `app/component/uploadBox.tsx` | การ์ดเลือก/ลากวางไฟล์ + ปุ่ม "สรุปเลย" |
+| `app/component/loadingNotice.tsx` | หน้ารอสรุป (นาฬิกา + ปุ่มยกเลิก) |
 | `app/component/summaryView.tsx` | หน้าผลสรุป + แท็บ |
-| `app/component/bulletView.tsx` | โน้ตทบทวน + คลังคำศัพท์ (ซ่อนความหมายได้) |
+| `app/component/bulletView.tsx` | โน้ตทบทวน (ไฮไลต์จุดออกสอบ) + คลังคำศัพท์ (โหมดทดสอบ) |
 | `app/component/slideView.tsx` | สไลด์ทีละหน้า (ปุ่ม ← → ได้) |
 | `app/component/exportButton.tsx` | ปุ่มดาวน์โหลด .pptx |
 | `app/api/summarize/route.ts` | API: ตรวจไฟล์ → เรียก Claude |
@@ -30,6 +31,7 @@ npm run dev                  # เปิด http://localhost:3000
 | `lib/exportPptx.ts` | สร้างไฟล์ .pptx ในเบราว์เซอร์ |
 | `lib/constants.ts` | ค่าตั้งต้น: ขนาดไฟล์สูงสุด, รุ่น Claude, max tokens |
 | `types/summary.ts` | type `Lecture` / `Bullet` / `Slide` / `TechnicalTerm` |
+| `app/globals.css` | สีธีม "สมุดโน้ต" + เส้นบรรทัดพื้นหลัง (แก้สีที่นี่ที่เดียว) |
 
 ## Deploy บน Vercel
 

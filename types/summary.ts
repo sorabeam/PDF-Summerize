@@ -6,9 +6,15 @@ type TechnicalTerm = {
   evokes?: string[];
 };
 
+// 1 ข้อในโน้ตทบทวน · exam = true คือ "จุดที่น่าจะออกสอบ" (หน้าเว็บไฮไลต์เหลือง)
+type BulletDetail = {
+  text: string;
+  exam: boolean;
+};
+
 type Bullet = {
   bulletName: string;
-  details: string[];
+  details: BulletDetail[];
   examples?: string[];
   keyTakeaways?: string[];
   technicalTerms?: TechnicalTerm[];
@@ -30,4 +36,4 @@ type Lecture = {
 
 type Status = "idle" | "loading" | "error" | "done";
 
-export type { TechnicalTerm, Bullet, Slide, Lecture, Status };
+export type { TechnicalTerm, BulletDetail, Bullet, Slide, Lecture, Status };
