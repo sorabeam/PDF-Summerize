@@ -1,86 +1,95 @@
 @import "tailwindcss";
 
-/* สีทั้งเว็บอยู่ที่นี่ที่เดียว (single source of truth) → ใช้ใน className เช่น bg-surface, text-muted, border-accent/40 */
+/* ธีม "สมุดโน้ตอ่านสอบ" — สีทั้งเว็บอยู่ที่นี่ที่เดียว (single source of truth)
+   ใช้ใน className เช่น bg-paper, text-ink, border-rule, bg-hl/75
+   กติกาสีเหลือง (hl): ใช้กับ "จุดที่น่าจะออกสอบ" และสิ่งที่ต้องจำเท่านั้น ไม่ใช้ตกแต่งมั่ว ๆ */
 :root {
-  --background: #f5f6fc;
-  --surface: #ffffff;
-  --surface-2: #eef0f9;
-  --foreground: #1a1b2e;
-  --muted: #5f6380;
-  --border: #dfe2f0;
-  --accent: #4f46e5; /* indigo */
-  --accent-2: #9333ea; /* violet — ใช้คู่กับ accent ทำ gradient */
-  --brand: #4f46e5; /* พื้นปุ่ม/แท็บที่มีตัวหนังสือขาวทับ */
-  --brand-2: #9333ea;
-  --accent-strong: #4338ca;
-  --accent-soft: #eceafe;
-  --on-accent: #ffffff;
-  --highlight: #fff7e0;
-  --highlight-border: #f5cf6b;
-  --danger: #dc2626;
-  --danger-soft: #fdecec;
-  --success: #059669;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0e18;
-    --surface: #151827;
-    --surface-2: #1c2033;
-    --foreground: #eceefb;
-    --muted: #9da3c4;
-    --border: #2a2f48;
-    --accent: #818cf8;
-    --accent-2: #c084fc;
-    --brand: #5b54e8; /* dark mode: เข้มกว่า accent ตัวหนังสือขาวจะอ่านชัด */
-    --brand-2: #8b3fd9;
-    --accent-strong: #a5b4fc;
-    --accent-soft: #232650;
-    --on-accent: #ffffff;
-    --highlight: #2b2414;
-    --highlight-border: #7a5f1f;
-    --danger: #f87171;
-    --danger-soft: #2f1517;
-    --success: #34d399;
-  }
+  --background: #faf6ec; /* กระดาษสมุดสีครีม */
+  --paper: #fffdf7; /* การ์ดกระดาษ (กล่องอัปโหลด แผงผลลัพธ์) */
+  --card: #ffffff; /* การ์ดเนื้อหาด้านใน */
+  --ink: #2b2620; /* หมึก: ตัวหนังสือหลัก ขอบ ปุ่มหลัก */
+  --muted: #6e655a; /* ตัวหนังสือรอง */
+  --pen: #2f4bb8; /* ปากกาน้ำเงิน: ลิงก์ เลขหัวข้อ checkbox */
+  --pen-soft: #e6eaf8;
+  --hl: #ffe066; /* ปากกาไฮไลต์ */
+  --rule: #e6ddc8; /* เส้นบรรทัดสมุด / เส้นคั่น */
+  --margin: #e9a99a; /* เส้นกั้นหน้าสีแดง */
+  --danger: #b42318;
+  --danger-soft: #fdecea;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
   --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-accent: var(--accent);
-  --color-accent-2: var(--accent-2);
-  --color-brand: var(--brand);
-  --color-brand-2: var(--brand-2);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
-  --color-on-accent: var(--on-accent);
-  --color-highlight: var(--highlight);
-  --color-highlight-border: var(--highlight-border);
+  --color-pen: var(--pen);
+  --color-pen-soft: var(--pen-soft);
+  --color-hl: var(--hl);
+  --color-rule: var(--rule);
+  --color-margin: var(--margin);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
-  --color-success: var(--success);
-  /* ตัวอักษรอังกฤษใช้ Geist · ตัวไทยตกไปใช้ Noto Sans Thai อัตโนมัติ */
-  --font-sans: var(--font-geist-sans), var(--font-noto-thai), sans-serif;
-  --font-mono: var(--font-geist-mono), var(--font-noto-thai), monospace;
+
+  /* เนื้อหา: IBM Plex Sans Thai (มีทั้งไทยและอังกฤษ)
+     หัวข้อ: Noto Serif Thai ไม่มีตัวอังกฤษ/ตัวเลข → ใส่ Noto Serif ไว้ก่อน
+     browser จะวาดตัวอังกฤษด้วย Noto Serif แล้วตกไปใช้ Noto Serif Thai กับตัวไทยเอง */
+  --font-sans: var(--font-plex-thai), sans-serif;
+  --font-serif: var(--font-noto-serif), var(--font-noto-serif-thai), serif;
+
+  /* เงาแข็งแบบกระดาษวางซ้อน */
+  --shadow-paper: 8px 8px 0 var(--ink);
+  --shadow-paper-sm: 5px 5px 0 var(--ink);
+  --shadow-press: 4px 4px 0 var(--hl);
 }
 
 body {
-  /* พื้นหลังมีแสงสีจาง ๆ มุมบน ไม่ให้จืด */
-  background:
-    radial-gradient(60rem 30rem at 15% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
-    radial-gradient(50rem 25rem at 95% 0%, color-mix(in oklab, var(--accent-2) 12%, transparent), transparent 70%),
-    var(--background);
-  background-attachment: fixed;
-  color: var(--foreground);
+  /* เส้นบรรทัดสมุดทุก 36px + เส้นกั้นหน้าสีแดงด้านซ้าย (วาดด้วย CSS ไม่ต้องใช้รูป) */
+  background-color: var(--background);
+  background-image:
+    linear-gradient(to right, transparent 71px, var(--margin) 71px, var(--margin) 73px, transparent 73px),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 35px,
+      color-mix(in oklab, var(--rule) 60%, transparent) 35px,
+      color-mix(in oklab, var(--rule) 60%, transparent) 36px
+    );
+  color: var(--ink);
   font-family: var(--font-sans);
 }
 
-/* การ์ดเลื่อนขึ้นนุ่ม ๆ ตอนโผล่ */
+@media (max-width: 639px) {
+  body {
+    /* จอเล็ก: ขยับเส้นกั้นหน้าไปชิดซ้าย เส้นบรรทัดถี่ขึ้น */
+    background-image:
+      linear-gradient(to right, transparent 11px, var(--margin) 11px, var(--margin) 13px, transparent 13px),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 31px,
+        color-mix(in oklab, var(--rule) 60%, transparent) 31px,
+        color-mix(in oklab, var(--rule) 60%, transparent) 32px
+      );
+  }
+}
+
+::selection {
+  background: var(--hl);
+  color: var(--ink);
+}
+
+/* ตัดคำไทยให้ไม่ขาดกลางคำ (browser ที่รองรับจะตัดตามพจนานุกรม) */
+h1,
+h2,
+h3 {
+  word-break: keep-all;
+  line-break: strict;
+  text-wrap: balance;
+}
+
+/* การ์ดสไลด์เลื่อนขึ้นนุ่ม ๆ ตอนเปลี่ยนหน้า (ใช้ที่เดียวพอ) */
 @keyframes rise {
   from {
     opacity: 0;
@@ -92,8 +101,22 @@ body {
   }
 }
 
+/* แถบโหลดแบบไม่รู้ว่าเหลือเท่าไร (indeterminate) วิ่งวนไปเรื่อย ๆ */
+/* ใช้ property translate (ไม่ใช่ transform) ให้ทับค่า translate-x-* ของ Tailwind v4 ได้พอดี */
+@keyframes sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 360% 0;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .animate-rise {
-    animation: rise 0.35s ease-out both;
+    animation: rise 0.3s ease-out both;
+  }
+  .animate-sweep {
+    animation: sweep 1.6s ease-in-out infinite;
   }
 }

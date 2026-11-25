@@ -26,17 +26,16 @@ export function ExportButton({ lecture }: { lecture: Lecture }) {
   }
 
   return (
-    <div className="flex flex-col items-end">
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={busy}
-        className={`${BUTTON_PRIMARY} py-2 text-sm`}
-      >
-        {busy ? <Spinner className="size-4" /> : <DownloadIcon className="size-4" />}
-        {busy ? "กำลังสร้างไฟล์..." : "ดาวน์โหลด .pptx"}
+    <div className="flex shrink-0 flex-col items-stretch lg:items-end">
+      <button type="button" onClick={handleExport} disabled={busy} className={BUTTON_PRIMARY}>
+        {busy ? <Spinner className="size-[18px]" /> : <DownloadIcon className="size-[18px]" />}
+        {busy ? "กำลังสร้างไฟล์..." : "ดาวน์โหลดสไลด์ .pptx"}
       </button>
-      {failed && <p className="mt-1 text-xs text-danger">สร้างไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง</p>}
+      {failed && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          สร้างไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง
+        </p>
+      )}
     </div>
   );
 }

@@ -1,41 +1,83 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Spinner } from "./icons";
+import { formatFileSize } from "@/lib/fileCheck";
+import { FileIcon, PenIcon, Spinner, Tape } from "./icons";
+import { BUTTON_SECONDARY, PAPER_CARD } from "./styles";
 
-// แสดงระหว่างรอ Claude สรุป (อาจนาน 1–3 นาที) — บอกเวลาที่ผ่านไปจะได้ไม่คิดว่าค้าง
-export function LoadingNotice() {
+// 75 วินาที → "1:15"
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+// หน้ารอ Claude สรุป (1–3 นาที)
+// server ยิง bullets กับ slides พร้อมกัน (Promise.all) → เราไม่รู้ว่าเสร็จไปกี่ % จริง ๆ
+// จึงใช้แถบวิ่งวน (indeterminate) + นาฬิกา แทนการแต่งเปอร์เซ็นต์ขึ้นมาเอง
+export function LoadingCard({ file, onCancel }: { file: File; onCancel: () => void }) {
   const [seconds, setSeconds] = useState(0);
 
-  // useEffect = "ทำอะไรบางอย่างหลัง component โผล่บนจอ"
-  // ที่นี่: ตั้งนาฬิกานับทุก 1 วิ · return = เก็บกวาดตอน component หายไป (ไม่งั้นนาฬิกาเดินต่อ)
+  // useEffect + cleanup: ตั้งนาฬิกาตอนโผล่ · เก็บกวาดตอนหายไป (ไม่งั้นนาฬิกาเดินต่อ)
   useEffect(() => {
     const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const message =
-    seconds < 15
-      ? "กำลังอ่าน PDF..."
-      : seconds < 60
-        ? "กำลังเขียนโน้ตทบทวนและสไลด์..."
-        : "ไฟล์ยาวหน่อย อาจใช้เวลาถึง 2–3 นาที อย่าเพิ่งปิดหน้านี้นะ";
+  const hint =
+    seconds < 90
+      ? "ปกติใช้เวลาประมาณ 1–2 นาที เปิดหน้านี้ค้างไว้ได้เลย เสร็จแล้วผลลัพธ์จะขึ้นมาเอง"
+      : "ไฟล์นี้ยาวหน่อย อาจใช้เวลาถึง 3 นาที อย่าเพิ่งปิดหน้านี้";
 
   return (
-    <div
-      role="status"
-      className="animate-rise relative overflow-hidden rounded-xl border border-accent/30 bg-accent-soft px-4 py-3 shadow-sm"
-    >
-      <div className="flex items-center gap-3">
-        <Spinner className="size-5 shrink-0 text-accent" />
-        <p className="text-sm font-medium">
-          {message} <span className="font-normal text-muted tabular-nums">({seconds} วินาที)</span>
-        </p>
-      </div>
-      {/* แถบวิ่ง ๆ ด้านล่าง ให้รู้ว่ายังทำงานอยู่ */}
-      <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden">
-        <div className="h-full w-1/3 animate-pulse rounded-full bg-linear-to-r from-accent to-accent-2" style={{ marginLeft: `${(seconds * 13) % 67}%`, transition: "margin-left 1s linear" }} />
-      </div>
+    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-8">
+      <section role="status" aria-live="polite" className={`${PAPER_CARD} p-6 pt-8 sm:p-12`}>
+        <Tape />
+
+        <div className="flex items-center gap-3 rounded-lg border border-rule bg-card px-3.5 py-2.5">
+          <FileIcon className="size-5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate font-semibold">{file.name}</span>
+          <span className="shrink-0 text-sm text-muted">{formatFileSize(file.size)}</span>
+        </div>
+
+        <h1 className="mt-6 font-serif text-[26px] leading-snug font-bold sm:text-[34px]">
+          กำลังสรุปชีทของคุณ
+        </h1>
+        <p className="mt-2 leading-relaxed text-muted sm:text-[17px]">{hint}</p>
+
+        <div className="mt-6">
+          <div className="h-1.5 overflow-hidden rounded-full bg-rule">
+            <div className="animate-sweep h-full w-[28%] translate-x-[60%] rounded-full bg-pen" />
+          </div>
+          <p className="mt-2 text-sm font-medium tabular-nums">ผ่านไป {formatElapsed(seconds)}</p>
+        </div>
+
+        <div className="mt-6">
+          <p className="text-[15px] font-semibold text-muted">กำลังเขียนพร้อมกัน 2 ส่วน</p>
+          <ul className="mt-3 space-y-2.5">
+            {["โน้ตทบทวนและคลังคำศัพท์", "สไลด์อธิบายเนื้อหาใหม่"].map((task) => (
+              <li key={task} className="flex items-center gap-3 font-medium">
+                <Spinner className="size-[18px] text-pen" />
+                {task}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-7 flex flex-col-reverse items-stretch gap-3 border-t border-rule pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-center text-sm text-muted sm:text-left">ยกเลิกแล้วจะกลับไปหน้าเลือกไฟล์</p>
+          <button type="button" onClick={onCancel} className={BUTTON_SECONDARY}>
+            ยกเลิกการสรุป
+          </button>
+        </div>
+      </section>
+
+      {/* active recall: นึกเองก่อนอ่านโน้ต ช่วยให้จำได้นานกว่าอ่านอย่างเดียว */}
+      <p className="flex gap-3 px-1 text-[15px] leading-relaxed text-muted">
+        <PenIcon className="mt-1 size-[18px] shrink-0 text-pen" />
+        ระหว่างรอ ลองเขียนหัวข้อที่จำได้จากชีทนี้สัก 3 ข้อ แล้วเอาไปเทียบกับโน้ตที่ได้
+        จะจำแม่นกว่าอ่านอย่างเดียว
+      </p>
     </div>
   );
 }

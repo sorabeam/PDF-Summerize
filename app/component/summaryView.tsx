@@ -4,26 +4,18 @@ import { useState } from "react";
 import type { Lecture } from "@/types/summary";
 import { BulletView } from "./bulletView";
 import { ExportButton } from "./exportButton";
-import { FileIcon, RefreshIcon } from "./icons";
+import { FileIcon, ListIcon, SlidesIcon } from "./icons";
 import { SlideView } from "./slideView";
-import { BUTTON_SECONDARY, CARD } from "./styles";
+import { FOCUS } from "./styles";
 
 type Tab = "bullets" | "slides";
 
-const TABS: { id: Tab; icon: string; label: string; hint: string }[] = [
-  { id: "bullets", icon: "📝", label: "โน้ตทบทวน", hint: "จุดที่น่าจะออกสอบ + คำศัพท์" },
-  { id: "slides", icon: "🎞️", label: "สไลด์อธิบาย", hint: "อธิบายใหม่ทีละหัวข้อ" },
+const TABS = [
+  { id: "bullets" as const, Icon: ListIcon, label: "โน้ตทบทวน" },
+  { id: "slides" as const, Icon: SlidesIcon, label: "สไลด์อธิบาย" },
 ];
 
-export function SummaryView({
-  lecture,
-  fileName,
-  onReset,
-}: {
-  lecture: Lecture;
-  fileName: string;
-  onReset: () => void;
-}) {
+export function SummaryView({ lecture, fileName }: { lecture: Lecture; fileName: string }) {
   const [tab, setTab] = useState<Tab>("bullets");
   const termCount = lecture.bullets.reduce(
     (sum, bullet) => sum + (bullet.technicalTerms?.length ?? 0),
@@ -31,84 +23,67 @@ export function SummaryView({
   );
 
   const stats = [
-    { value: lecture.bullets.length, label: "หัวข้อทบทวน" },
+    { value: lecture.bullets.length, label: "หัวข้อ" },
     { value: lecture.slides.length, label: "สไลด์" },
     { value: termCount, label: "คำศัพท์" },
   ];
 
   return (
-    <div>
-      <header className={`${CARD} animate-rise relative overflow-hidden p-6 sm:p-8`}>
-        {/* วงแสงตกแต่งมุมขวา */}
-        <div className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-linear-to-br from-accent/25 to-accent-2/25 blur-2xl" />
-
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <p className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent">
-              <FileIcon className="size-3.5 shrink-0" />
-              <span className="truncate">{fileName}</span>
-            </p>
-            <h2 className="mt-3 text-2xl font-bold leading-snug sm:text-3xl">{lecture.name}</h2>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-start gap-2">
-            <button type="button" onClick={onReset} className={BUTTON_SECONDARY}>
-              <RefreshIcon className="size-4" /> สรุปไฟล์ใหม่
-            </button>
-            <ExportButton lecture={lecture} />
-          </div>
+    <div className="pt-2 sm:pt-6">
+      <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[13px] text-muted sm:text-[15px]">
+            <FileIcon className="size-4 shrink-0" />
+            <span className="truncate">{fileName}</span>
+          </p>
+          <h1 className="mt-2 font-serif text-[26px] leading-[1.35] font-bold sm:text-[40px]">{lecture.name}</h1>
+          <dl className="mt-2 flex flex-wrap gap-x-7 gap-y-1">
+            {stats.map((stat) => (
+              // flex-row-reverse: ใน HTML ให้ dt (ชื่อ) มาก่อน dd (ค่า) ตามหลัก แต่บนจอโชว์ตัวเลขก่อน
+              <div key={stat.label} className="flex flex-row-reverse items-baseline justify-end gap-1.5">
+                <dt className="text-[15px] text-muted">{stat.label}</dt>
+                <dd className="font-serif text-xl font-bold tabular-nums sm:text-[22px]">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-
-        <dl className="relative mt-6 grid grid-cols-3 gap-3">
-          {stats.map((stat) => (
-            // flex-col-reverse: ใน HTML ให้ dt (ชื่อ) มาก่อน dd (ค่า) ตามหลัก แต่บนจอโชว์ตัวเลขไว้บน
-            <div
-              key={stat.label}
-              className="flex flex-col-reverse rounded-xl border border-border bg-surface-2/60 px-4 py-3"
-            >
-              <dt className="text-xs text-muted">{stat.label}</dt>
-              <dd className="bg-linear-to-r from-accent to-accent-2 bg-clip-text text-2xl font-bold text-transparent tabular-nums">
-                {stat.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <ExportButton lecture={lecture} />
       </header>
 
-      <div
-        role="tablist"
-        className="mt-6 grid grid-cols-2 gap-1.5 rounded-2xl border border-border bg-surface p-1.5 shadow-sm"
-      >
-        {TABS.map((t) => {
-          const active = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/30 sm:px-4 ${active ? "bg-linear-to-r from-brand to-brand-2 text-on-accent shadow-md shadow-accent/30" : "text-muted hover:bg-accent-soft hover:text-accent"}`}
-            >
-              <span className="text-xl" aria-hidden>
-                {t.icon}
-              </span>
-              <span>
-                <span className="block font-semibold">{t.label}</span>
-                <span className={`hidden text-xs sm:block ${active ? "text-white/80" : ""}`}>
-                  {t.hint}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-6">
-        {tab === "bullets" ? (
-          <BulletView bullets={lecture.bullets} />
-        ) : (
-          <SlideView slides={lecture.slides} />
-        )}
+      {/* แท็บแบบแฟ้มเอกสาร: แท็บที่เลือกต่อเป็นเนื้อเดียวกับแผงด้านล่าง (ทับขอบแผงลงไป 1.5px) */}
+      <div className="mt-8 sm:mt-9">
+        <div role="tablist" aria-label="รูปแบบผลสรุป" className="relative z-10 flex gap-1.5">
+          {TABS.map(({ id, Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                id={`tab-${id}`}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls="summary-panel"
+                onClick={() => setTab(id)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-t-[10px] border-[1.5px] border-b-0 px-3 py-3 text-[15px] sm:flex-none sm:px-5 sm:text-base ${FOCUS} ${active ? "-mb-[1.5px] border-ink bg-paper font-semibold text-ink" : "border-rule bg-background font-medium text-muted hover:text-ink"}`}
+              >
+                <Icon className="size-[18px]" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <section
+          id="summary-panel"
+          role="tabpanel"
+          aria-labelledby={`tab-${tab}`}
+          className="rounded-b-[12px] border-[1.5px] border-ink bg-paper px-4 py-5 sm:rounded-tr-[12px] sm:p-10"
+        >
+          {tab === "bullets" ? (
+            <BulletView bullets={lecture.bullets} />
+          ) : (
+            <SlideView slides={lecture.slides} />
+          )}
+        </section>
       </div>
     </div>
   );

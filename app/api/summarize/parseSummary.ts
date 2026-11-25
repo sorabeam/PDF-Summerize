@@ -7,7 +7,7 @@
 // หลักการ: field บังคับหาย/ผิด → ทิ้งชิ้นนั้น · field optional ผิด → ตัด field นั้นทิ้ง
 // ถ้าทิ้งจนไม่เหลืออะไรเลย → ถือว่าสรุปพัง
 
-import type { Bullet, Slide, TechnicalTerm } from "@/types/summary";
+import type { Bullet, BulletDetail, Slide, TechnicalTerm } from "@/types/summary";
 
 // unknown = "ยังไม่รู้ว่าเป็นอะไร" ต้องเช็กก่อนถึงจะใช้ได้ (ปลอดภัยกว่า any)
 type UnknownObject = Record<string, unknown>;
@@ -50,9 +50,17 @@ function parseTechnicalTerm(raw: unknown): TechnicalTerm | null {
   };
 }
 
+// 1 ข้อในโน้ต: รับได้ทั้งแบบใหม่ { text, exam } และแบบเก่าที่เป็น string เฉย ๆ (ถือว่าไม่ใช่จุดออกสอบ)
+// exam ต้องเป็น true จริง ๆ เท่านั้น — ถ้า Claude ส่ง "true" (string) หรือลืมใส่ → false
+function parseBulletDetail(raw: unknown): BulletDetail | null {
+  if (isNonEmptyString(raw)) return { text: raw.trim(), exam: false };
+  if (!isObject(raw) || !isNonEmptyString(raw.text)) return null;
+  return { text: raw.text.trim(), exam: raw.exam === true };
+}
+
 function parseBullet(raw: unknown): Bullet | null {
   if (!isObject(raw) || !isNonEmptyString(raw.bulletName)) return null;
-  const details = toStringArray(raw.details);
+  const details = parseList(raw.details, parseBulletDetail);
   if (details.length === 0) return null;
   const technicalTerms = parseList(raw.technicalTerms, parseTechnicalTerm);
   return {

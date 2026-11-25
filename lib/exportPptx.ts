@@ -6,12 +6,14 @@ import type { Bullet, Lecture, Slide } from "@/types/summary";
 
 // ---- หน้าตา ----
 const FONT = "Tahoma"; // มีตัวไทยในทุกเครื่อง (Windows / Mac / Google Slides)
+// สีเดียวกับธีมเว็บ (สมุดโน้ต) — ดู app/globals.css
 const COLOR = {
-  text: "1D1C1A",
-  muted: "6B6860",
-  accent: "2F5BD3",
-  accentSoft: "E9EEFC",
-  paper: "FFFFFF",
+  text: "2B2620", // หมึก
+  muted: "6E655A",
+  accent: "2F4BB8", // ปากกาน้ำเงิน
+  accentSoft: "FAF6EC", // กระดาษครีม
+  highlight: "FFE066", // ไฮไลต์จุดออกสอบ
+  paper: "FFFDF7",
 };
 const SLIDE_W = 13.33; // LAYOUT_WIDE = 13.33 x 7.5 นิ้ว (16:9)
 const MARGIN = 0.6;
@@ -22,9 +24,12 @@ const BODY_FONT_SIZE = 18;
 const CHARS_PER_LINE = 95; // ประมาณที่ 18pt บนความกว้าง ~12 นิ้ว (เผื่อไว้นิดหน่อย)
 const MAX_LINES_PER_SLIDE = 14;
 
-// เนื้อหา 1 ชิ้นบนสไลด์: หัวข้อย่อย (ถ้ามี) + รายการ
-type Block = { heading?: string; items: string[] };
-type Line = { text: string; isHeading: boolean };
+// เนื้อหา 1 ชิ้นบนสไลด์: หัวข้อย่อย (ถ้ามี) + รายการ · exam = ไฮไลต์เหลืองเหมือนบนเว็บ
+type Item = { text: string; exam?: boolean };
+type Block = { heading?: string; items: Item[] };
+type Line = { text: string; isHeading: boolean; exam?: boolean };
+
+const toItems = (list: string[] = []): Item[] => list.map((text) => ({ text }));
 
 function estimateLines(text: string): number {
   // ไม่นับสระบน/ล่าง/วรรณยุกต์ไทย เพราะไม่กินความกว้าง
@@ -52,7 +57,7 @@ function paginate(blocks: Block[]): Line[][] {
     if (block.items.length === 0) continue;
     if (block.heading) {
       // หัวข้อย่อย + บรรทัดแรก ต้องอยู่หน้าเดียวกัน (ไม่ให้หัวข้อค้างท้ายหน้า)
-      const firstCost = estimateLines(block.items[0]);
+      const firstCost = estimateLines(block.items[0].text);
       if (used + 1.4 + firstCost > MAX_LINES_PER_SLIDE && page.length > 0) {
         pages.push(page);
         page = [];
@@ -61,7 +66,7 @@ function paginate(blocks: Block[]): Line[][] {
       push({ text: block.heading, isHeading: true }, 1.4);
     }
     for (const item of block.items) {
-      push({ text: item, isHeading: false }, estimateLines(item));
+      push({ text: item.text, isHeading: false, exam: item.exam }, estimateLines(item.text));
     }
   }
   if (page.length > 0) pages.push(page);
@@ -90,7 +95,12 @@ function addContentSlides(pptx: PptxGenJS, title: string, section: string, block
             }
           : {
               text: line.text,
-              options: { bullet: { indent: 18 }, breakLine: true, paraSpaceAfter: 4 },
+              options: {
+                bullet: { indent: 18 },
+                breakLine: true,
+                paraSpaceAfter: 4,
+                ...(line.exam ? { highlight: COLOR.highlight } : {}),
+              },
             },
       ),
       {
@@ -104,10 +114,10 @@ function addContentSlides(pptx: PptxGenJS, title: string, section: string, block
 
 function slideBlocks(slide: Slide): Block[] {
   return [
-    { items: slide.details },
-    { heading: "ตัวอย่าง", items: slide.examples ?? [] },
-    { heading: "สรุปสั้น ๆ", items: slide.keyTakeaways ?? [] },
-    { heading: "ทริค", items: slide.tips ?? [] },
+    { items: toItems(slide.details) },
+    { heading: "ตัวอย่าง", items: toItems(slide.examples) },
+    { heading: "จำง่าย ๆ", items: toItems(slide.keyTakeaways) },
+    { heading: "ทริค", items: toItems(slide.tips) },
   ];
 }
 
@@ -120,10 +130,10 @@ function bulletBlocks(bullet: Bullet): Block[] {
     return [`${term.word} — ${term.meaning}`, ...extra].join("  ·  ");
   });
   return [
-    { items: bullet.details },
-    { heading: "จำให้ขึ้นใจ", items: bullet.keyTakeaways ?? [] },
-    { heading: "ตัวอย่าง", items: bullet.examples ?? [] },
-    { heading: "คำศัพท์", items: terms },
+    { items: bullet.details }, // { text, exam } ตรงกับ Item อยู่แล้ว
+    { heading: "สรุปสั้น ๆ", items: toItems(bullet.keyTakeaways) },
+    { heading: "ตัวอย่าง", items: toItems(bullet.examples) },
+    { heading: "คำศัพท์", items: toItems(terms) },
   ];
 }
 
@@ -169,14 +179,15 @@ export function buildPresentation(lecture: Lecture): PptxGenJS {
 
   // หน้าปก
   const cover = pptx.addSlide();
-  cover.background = { color: COLOR.accent };
+  cover.background = { color: COLOR.accentSoft };
+  cover.addShape("rect", { x: 0, y: 0, w: 0.25, h: 7.5, fill: { color: COLOR.highlight } });
   cover.addText(lecture.name, {
     x: MARGIN, y: 2.2, w: SLIDE_W - MARGIN * 2, h: 2,
-    fontFace: FONT, fontSize: 40, bold: true, color: "FFFFFF", valign: "bottom", fit: "shrink",
+    fontFace: FONT, fontSize: 40, bold: true, color: COLOR.text, valign: "bottom", fit: "shrink",
   });
   cover.addText(
     `${lecture.slides.length} สไลด์อธิบาย · ${lecture.bullets.length} หัวข้อทบทวน · สรุปโดย PDF Summarizer`,
-    { x: MARGIN, y: 4.4, w: SLIDE_W - MARGIN * 2, h: 0.5, fontFace: FONT, fontSize: 16, color: "DCE5FB" },
+    { x: MARGIN, y: 4.4, w: SLIDE_W - MARGIN * 2, h: 0.5, fontFace: FONT, fontSize: 16, color: COLOR.muted },
   );
 
   addSectionSlide(pptx, "สไลด์อธิบาย", "อธิบายเนื้อหาใหม่ทีละหัวข้อ ด้วยภาษาที่เข้าใจง่าย");
@@ -184,7 +195,7 @@ export function buildPresentation(lecture: Lecture): PptxGenJS {
     addContentSlides(pptx, slide.topicName, "สไลด์อธิบาย", slideBlocks(slide));
   }
 
-  addSectionSlide(pptx, "โน้ตทบทวนก่อนสอบ", "จุดที่น่าจะออกสอบ + คำศัพท์สำคัญ");
+  addSectionSlide(pptx, "โน้ตทบทวนก่อนสอบ", "ข้อที่ไฮไลต์เหลือง = จุดที่น่าจะออกสอบ");
   for (const bullet of lecture.bullets) {
     addContentSlides(pptx, bullet.bulletName, "โน้ตทบทวน", bulletBlocks(bullet));
   }
