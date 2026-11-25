@@ -1,11 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { signOutAction } from "@/app/actions";
 import { getFileError } from "@/lib/fileCheck";
+import { fetchHistoryEntry } from "@/lib/history";
 import { requestSummary } from "@/lib/requestSummary";
 import type { Lecture, Status } from "@/types/summary";
+import { HistoryList } from "./historyList";
 import { CheckIcon, FileIcon, PlusIcon, SparkleIcon } from "./icons";
 import { LoadingCard } from "./loadingNotice";
+import { LoginCard } from "./loginCard";
 import { BUTTON_ICON, BUTTON_SECONDARY, FOCUS } from "./styles";
 import { SummaryView } from "./summaryView";
 import { UploadCard } from "./uploadBox";
@@ -18,7 +22,7 @@ const CHECKLIST = [
 
 // เป็นลำดับขั้นจริง → ใส่เลข 01 02 03 ได้
 const STEPS = [
-  { title: "อัปโหลดชีท", text: "ลากไฟล์ PDF มาวาง หรือกดเลือกไฟล์ ขนาดไม่เกิน 4 MB" },
+  { title: "อัปโหลดชีท", text: "เข้าสู่ระบบด้วย Google แล้วลากไฟล์ PDF มาวาง ขนาดไม่เกิน 4 MB" },
   { title: "รอสรุปประมาณ 1–2 นาที", text: "ระบบอ่านทั้งไฟล์ แล้วแยกเป็นโน้ต คำศัพท์ และสไลด์" },
   { title: "อ่าน ทดสอบ แล้วโหลดเก็บ", text: "ทบทวนจากโน้ต ทดสอบคำศัพท์ หรือโหลดสไลด์เป็น .pptx" },
 ];
@@ -27,16 +31,31 @@ const STEPS = [
 const PAGE_X = "w-full px-4 sm:pl-24 sm:pr-10";
 const PAGE_INNER = "mx-auto w-full max-w-[1200px]";
 
-export function HomePage() {
+// user มาจาก server (page.tsx อ่าน session ให้) · null = ยังไม่ login
+// mockMode = USE_MOCK=1 → ใช้ได้โดยไม่ต้อง login และไม่มีประวัติ (ไว้แต่ง UI)
+type HomePageProps = {
+  user: { name: string } | null;
+  mockMode: boolean;
+};
+
+// ผลสรุปที่กำลังเปิดอยู่ (มาจากการสรุปใหม่ หรือเปิดจากประวัติก็ได้)
+type OpenResult = { lecture: Lecture; fileName: string };
+
+export function HomePage({ user, mockMode }: HomePageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<Status>("idle");
-  const [lecture, setLecture] = useState<Lecture | null>(null);
+  const [result, setResult] = useState<OpenResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [historyKey, setHistoryKey] = useState(0);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openError, setOpenError] = useState("");
   // useRef = กล่องเก็บค่าที่ "ไม่ต้องวาดจอใหม่" เมื่อเปลี่ยน → เหมาะกับตัวยกเลิก fetch
   const abortRef = useRef<AbortController | null>(null);
 
   // derived state: ไม่ต้องเก็บใน useState เพราะคำนวณจาก file ได้ทุกครั้ง
   const fileError = file ? getFileError(file) : null;
+  const canSummarize = mockMode || user !== null;
+  const hasHistory = !mockMode && user !== null;
 
   function handlePick(picked: File | null) {
     setFile(picked);
@@ -51,8 +70,11 @@ export function HomePage() {
     setStatus("loading");
     setErrorMessage("");
     try {
-      setLecture(await requestSummary(file, controller.signal));
+      const { lecture } = await requestSummary(file, controller.signal);
+      setResult({ lecture, fileName: file.name });
       setStatus("done");
+      setHistoryKey((k) => k + 1); // ให้รายการประวัติโหลดใหม่ (มีไฟล์นี้เพิ่ม)
+      window.scrollTo({ top: 0 });
     } catch (err) {
       if (controller.signal.aborted) return; // ผู้ใช้กดยกเลิกเอง ไม่ใช่ error
       setErrorMessage(err instanceof Error ? err.message : "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
@@ -67,14 +89,29 @@ export function HomePage() {
     setStatus("idle"); // เก็บไฟล์ไว้ กด "สรุปเลย" ใหม่ได้ทันที
   }
 
+  async function handleOpenHistory(id: string) {
+    setOpeningId(id);
+    setOpenError("");
+    try {
+      const entry = await fetchHistoryEntry(id);
+      setResult(entry);
+      setStatus("done");
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      setOpenError(err instanceof Error ? err.message : "เปิดผลสรุปไม่สำเร็จ");
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
   function handleReset() {
     setFile(null);
-    setLecture(null);
+    setResult(null);
     setStatus("idle");
     setErrorMessage("");
   }
 
-  const isDone = status === "done" && lecture !== null && file !== null;
+  const isDone = status === "done" && result !== null;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -101,12 +138,21 @@ export function HomePage() {
                 </button>
               </span>
             </>
-          ) : (
+          ) : user ? (
             status !== "loading" && (
-              <a href="#how" className={`rounded text-[15px] font-medium text-muted hover:text-ink ${FOCUS}`}>
-                วิธีใช้
-              </a>
+              <span className="flex items-center gap-4">
+                <span className="hidden max-w-48 truncate text-[15px] text-muted sm:inline">{user.name}</span>
+                <form action={signOutAction}>
+                  <button type="submit" className={`rounded text-[15px] font-medium text-muted underline-offset-4 hover:text-ink hover:underline ${FOCUS}`}>
+                    ออกจากระบบ
+                  </button>
+                </form>
+              </span>
             )
+          ) : (
+            <a href="#how" className={`rounded text-[15px] font-medium text-muted hover:text-ink ${FOCUS}`}>
+              วิธีใช้
+            </a>
           )}
         </div>
       </header>
@@ -114,7 +160,7 @@ export function HomePage() {
       <main className={`${PAGE_X} flex-1 pb-16 sm:pb-24`}>
         <div className={PAGE_INNER}>
           {isDone ? (
-            <SummaryView lecture={lecture} fileName={file.name} />
+            <SummaryView lecture={result.lecture} fileName={result.fileName} />
           ) : status === "loading" && file ? (
             <div className="pt-6 sm:pt-12">
               <LoadingCard file={file} onCancel={handleCancel} />
@@ -149,14 +195,29 @@ export function HomePage() {
                   </ul>
                 </div>
 
-                <UploadCard
-                  file={file}
-                  fileError={fileError}
-                  submitError={status === "error" ? errorMessage : ""}
-                  onPick={handlePick}
-                  onSubmit={handleSummarize}
-                />
+                {canSummarize ? (
+                  <UploadCard
+                    file={file}
+                    fileError={fileError}
+                    submitError={status === "error" ? errorMessage : ""}
+                    onPick={handlePick}
+                    onSubmit={handleSummarize}
+                  />
+                ) : (
+                  <LoginCard />
+                )}
               </section>
+
+              {hasHistory && (
+                <div className="mt-16 sm:mt-24">
+                  {openError && (
+                    <p role="alert" className="mb-4 text-sm font-medium text-danger">
+                      {openError}
+                    </p>
+                  )}
+                  <HistoryList refreshKey={historyKey} openingId={openingId} onOpen={handleOpenHistory} />
+                </div>
+              )}
 
               <section id="how" className="mt-16 scroll-mt-6 sm:mt-24">
                 <h2 className="sr-only">วิธีใช้</h2>
