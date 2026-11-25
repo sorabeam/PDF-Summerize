@@ -238,6 +238,12 @@ export function HomePage({ user, mockMode }: HomePageProps) {
 
       <footer className={`${PAGE_X} pb-8 text-center text-xs text-muted`}>
         สรุปโดย AI อาจมีผิดพลาด ตรวจกับเอกสารต้นฉบับก่อนสอบเสมอ
+        <span className="mx-2" aria-hidden>
+          ·
+        </span>
+        <a href="/privacy" className={`rounded underline underline-offset-4 hover:text-ink ${FOCUS}`}>
+          นโยบายความเป็นส่วนตัว
+        </a>
       </footer>
     </div>
   );
